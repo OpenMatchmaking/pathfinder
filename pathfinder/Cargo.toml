@@ -1,0 +1,16 @@
+[package]
+name = "pathfinder"
+version = "0.1.0"
+authors = ["Valeryi Savich <relrin78@gmail.com>"]
+repository = "https://github.com/OpenMatchmaking/pathfinder"
+readme = "../README.md"
+keywords = ["websocket", "kafka", "proxy"]
+license = "BSD-3-Clause"
+
+[dependencies]
+rdkafka = "0.12.0"
+json = "0.11.9"
+
+[dependencies.rdkafka]
+version = "0.12.0"
+features = ["ssl", "sasl"]
