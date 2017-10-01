@@ -4,7 +4,10 @@ WebSocket-over-Kafka reverse proxy
 # Dependencies
 ```toml
 [dependencies]
+clap = "2.26.2"
 json = "0.11.9"
+ws = "0.7.3"
+yaml-rust = "0.3"
 
 [dependencies.rdkafka]
 version = "0.12.0"
