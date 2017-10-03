@@ -1,13 +1,15 @@
 mod cli;
 
-use cli::{Cli};
+
+use cli::{cli, get_value};
 
 
 fn main() {
-    let cli = Cli::new();
-    //let matches = cli.get_matches();
+    let cli = cli();
 
-    //let config = matches.value_of("config").unwrap_or("default.yaml");
-    let config = cli.get_value("config", "default.yaml");
-    println!("Value for config: {}", config);
+    let config = get_value(&cli,"config", "");
+    let ip = get_value(&cli,"ip", "127.0.0.1");
+    let port = get_value(&cli,"port", "8080");
+    let ssl_certificate = get_value(&cli,"cert", "");
+    let ssl_public_key = get_value(&cli,"key", "");
 }
