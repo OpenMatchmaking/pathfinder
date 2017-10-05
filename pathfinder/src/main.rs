@@ -15,5 +15,5 @@ fn main() {
     //let ssl_public_key = get_value(&cli,"key", "");
 
     let config = load_config(config_path);
-    println!("{:?}", config)
+    println!("{:?}", config);
 }
