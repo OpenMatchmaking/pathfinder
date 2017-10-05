@@ -14,6 +14,23 @@ version = "0.12.0"
 features = ["ssl", "sasl"]
 ```
 
+# Configuration file
+
+# Example of configuration file
+```yaml
+endpoints:
+  - search:
+    - url: "/api/matchmaking/search"
+    - microservice: "microservice.search"
+  - leaderboard:
+    - url: "/api/matchmaking/leaderboard"
+    - microservice: "microservice.leaderboard"
+websocket:
+  - "127.0.0.1:9000"
+kafka:
+  - "127.0.0.1:9092"
+```
+
 # Documentation
 Information about why this reverse proxy was implemented you can find [here](https://github.com/OpenMatchmaking/documentation/blob/master/docs/components.md#reverse-proxy).
 
