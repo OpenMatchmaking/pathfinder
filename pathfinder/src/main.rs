@@ -1,5 +1,6 @@
 mod cli;
 mod config;
+mod error;
 
 use cli::{cli, get_value};
 use config::{load_config};

@@ -1,33 +1,30 @@
 extern crate yaml_rust;
 
-use std::error::Error;
 use std::fs::File;
 use std::io::Read;
+
+use error::{Result};
 use self::yaml_rust::{Yaml, YamlLoader};
 
-// TODO: Add error processing more Rust idiomatic way (via returning Result object)
 
-
-fn read_file(filepath: &str) -> String {
-    let mut file = match File::open(filepath) {
-        Ok(file) => file,
-        Err(why) => panic!("Couldn't open file: {}", why.description())
-    };
-
+fn read_file(file_path: &str) -> Result<String> {
+    let mut file = try!(File::open(file_path));
     let mut data = String::new();
-    match file.read_to_string(&mut data) {
-        Ok(_) => {},
-        Err(why) => panic!("Couldn't read file: {}", why.description())
-    };
-
-    data
+    try!(file.read_to_string(&mut data));
+    Ok(data)
 }
 
 
-pub fn load_config(filepath: &str) -> Yaml {
-    let data = match filepath {
+pub fn load_config(file_path: &str) -> Yaml {
+    let data = match file_path {
         "" => "---".to_string(),
-        _ => read_file(filepath)
+        _ => match read_file(file_path) {
+            Ok(content) => content,
+            Err(why) => {
+                println!("{}", why);
+                "---".to_string()
+            }
+        }
     };
 
     let docs = YamlLoader::load_from_str(data.as_str()).unwrap();
@@ -41,15 +38,20 @@ mod tests {
     use super::Yaml;
 
     #[test]
-    #[should_panic]
-    fn test_read_file_will_panic_for_invalid_filepath() {
-        read_file(&"invalid_path.yaml");
+    fn test_read_file_returns_an_error_for_invalid_filepath() {
+        let result = read_file(&"invalid_path.yaml");
+        assert_eq!(result.is_err(), true);
+        assert_eq!(
+            format!("{}", result.unwrap_err()),
+            "IO error: No such file or directory (os error 2)"
+        );
     }
 
     #[test]
     fn test_read_file_returns_yaml_data() {
-        let data = read_file(&"./tests/files/valid_file.yaml");
-        assert_eq!(data, "foo:\n  - bar\n");
+        let result = read_file(&"./tests/files/valid_file.yaml");
+        assert_eq!(result.is_ok(), true);
+        assert_eq!(result.unwrap(), "foo:\n  - bar\n");
     }
 
     #[test]
