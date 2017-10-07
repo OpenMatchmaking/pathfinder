@@ -46,6 +46,6 @@ pub struct CliOptions {
     #[structopt(short = "z",
                 long = "kafka-port",
                 help = "The listened port by Kafka broker",
-                default_value = "8080")]
+                default_value = "9092")]
     pub kafka_port: i32,
 }
