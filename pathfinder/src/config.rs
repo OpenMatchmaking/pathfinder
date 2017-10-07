@@ -1,68 +1,49 @@
-extern crate yaml_rust;
+extern crate config;
 
-use std::fs::File;
-use std::io::Read;
-
-use error::{Result};
-use self::yaml_rust::{Yaml, YamlLoader};
+use self::config::{Config, File};
 
 
-fn read_file(file_path: &str) -> Result<String> {
-    let mut file = try!(File::open(file_path));
-    let mut data = String::new();
-    try!(file.read_to_string(&mut data));
-    Ok(data)
-}
+// Creates the default configuration for an application with data,
+// read from file.
+pub fn get_config(file_path: &str) -> Box<Config> {
+    let mut conf = Box::new(Config::default());
 
+    if file_path != "" {
+        conf.merge(File::with_name(file_path))
+            .map_err(|why|
+                println!("Error during reading file: {}. \
+                          Changes won't applied.", why)
+            )
+            .and_then(|new_config| Ok(new_config))
+            .is_ok();
+    }
 
-pub fn load_config(file_path: &str) -> Yaml {
-    let data = match file_path {
-        "" => "---".to_string(),
-        _ => match read_file(file_path) {
-            Ok(content) => content,
-            Err(why) => {
-                println!("{}", why);
-                "---".to_string()
-            }
-        }
-    };
-
-    let docs = YamlLoader::load_from_str(data.as_str()).unwrap();
-    docs[0].clone()
+    conf
 }
 
 
 #[cfg(test)]
 mod tests {
-    use super::{load_config, read_file};
-    use super::Yaml;
+    use super::{get_config};
 
     #[test]
-    fn test_read_file_returns_an_error_for_invalid_filepath() {
-        let result = read_file(&"invalid_path.yaml");
-        assert_eq!(result.is_err(), true);
-        assert_eq!(
-            format!("{}", result.unwrap_err()),
-            "IO error: No such file or directory (os error 2)"
-        );
+    fn test_get_config_returns_a_new_config_by_default() {
+        let conf = get_config(&"");
+        assert_eq!(format!("{}", conf.cache), "nil");
     }
 
     #[test]
-    fn test_read_file_returns_yaml_data() {
-        let result = read_file(&"./tests/files/valid_file.yaml");
-        assert_eq!(result.is_ok(), true);
-        assert_eq!(result.unwrap(), "foo:\n  - bar\n");
-    }
+    fn test_get_config_returns_a_new_config_with_values_from_file() {
+        let conf = get_config(&"./tests/files/valid_file.yaml");
 
-    #[test]
-    fn test_load_config_returns_an_empty_yaml_by_default() {
-        let doc = load_config(&"");
-        assert_eq!(doc, Yaml::Null);
-    }
+        let data = conf.cache.into_table();
+        assert_eq!(data.is_ok(), true);
 
-    #[test]
-    fn test_load_config_returns_an_valid_yaml_document() {
-        let doc = load_config(&"./tests/files/valid_file.yaml");
-        assert_eq!(doc["foo"][0].as_str().unwrap(), "bar");
+        let table = data.unwrap();
+        assert_eq!(table.contains_key("foo"), true);
+
+        let foo_array = table["foo"].clone().into_array().unwrap();
+        assert_eq!(foo_array.len(), 1);
+        assert_eq!(foo_array[0].clone().into_str().unwrap(), "bar");
     }
 }

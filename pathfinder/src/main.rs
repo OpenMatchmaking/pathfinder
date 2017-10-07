@@ -1,20 +1,20 @@
+extern crate structopt;
+#[macro_use]
+extern crate structopt_derive;
+
+
 mod cli;
 mod config;
 mod error;
 
-use cli::{cli, get_value};
-use config::{load_config};
+
+use cli::{CliOptions};
+use config::{get_config};
+use structopt::StructOpt;
 
 
 fn main() {
-    let cli = cli();
-
-    let config_path = get_value(&cli,"config", "");
-    //let ip = get_value(&cli,"ip", "127.0.0.1");
-    //let port = get_value(&cli,"port", "8080");
-    //let ssl_certificate = get_value(&cli,"cert", "");
-    //let ssl_public_key = get_value(&cli,"key", "");
-
-    let config = load_config(config_path);
+    let cli = CliOptions::from_args();
+    let config = get_config(&cli.config);
     println!("{:?}", config);
 }

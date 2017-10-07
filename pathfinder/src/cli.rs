@@ -1,53 +1,51 @@
-extern crate clap;
-
-use std::cell::RefCell;
-use self::clap::{App, ArgMatches};
+extern crate structopt;
 
 
-pub fn cli<'a>() -> ArgMatches<'a> {
-    App::new("Pathfinder")
-        .version("0.1.0")
-        .author("Valeryi Savich <relrin78@gmail.com>")
-        .about("WebSocket-over-Kafka reverse proxy")
-        .args_from_usage(
-           "-c, --config=[FILE]       'Path to a custom settings file'
-            -i, --ip=[IP]             'The used IP for a server'
-            -p, --port=[PORT]         'The listened port'
-            -C, --cert=[CERTIFICATE]  'Path to a used certificate'
-            -K, --key=[KEY]           'Path to a public key'",
-        )
-        .get_matches()
-}
+#[derive(StructOpt, Debug)]
+#[structopt(name = "Pathfinder",
+            version = "0.1.0",
+            author = "Valeryi Savich <relrin78@gmail.com>",
+            about = "WebSocket-over-Kafka reverse proxy")]
+pub struct CliOptions {
+    #[structopt(short = "c",
+                long = "config",
+                help = "Path to a custom settings file",
+                default_value = "")]
+    pub config: String,
 
+    #[structopt(short = "i",
+                long = "ip",
+                help = "The used IP for a server",
+                default_value = "127.0.0.1")]
+    pub ip: String,
 
-pub fn get_value<'a>(cli: &'a ArgMatches<'a>, key: &'a str, default: &'a str) -> &'a str {
-    let cli = RefCell::new(cli);
-    let cli = cli.into_inner();
-    cli.value_of(key).unwrap_or(default)
-}
+    #[structopt(short = "p",
+                long = "port",
+                help = "The listened port",
+                default_value = "8080")]
+    pub port: i32,
 
+    #[structopt(short = "C",
+                long = "cert",
+                help = "Path to a SSL certificate",
+                default_value = "")]
+    pub ssl_certificate: String,
 
-#[cfg(test)]
-mod tests {
-    use super::clap::{App, Arg};
-    use super::{cli, get_value};
+    #[structopt(short = "K",
+                long = "key",
+                help = "Path to a SSL public key",
+                default_value = "")]
+    pub ssl_public_key: String,
 
-    #[test]
-    fn test_get_value_returns_extracted_value() {
-        let cli = App::new("Test CLI")
-                    .version("0.1.0")
-                    .arg(Arg::with_name("config")
-                        .short("c")
-                        .long("config")
-                        .default_value("test")
-                    )
-                   .get_matches();
-        assert_eq!(get_value(&cli, "config", "not found"), "test");
-    }
+    #[structopt(short = "x",
+                long = "kafka-ip",
+                help = "The used IP by Kafka broker",
+                default_value = "127.0.0.1")]
+    pub kafka_ip: String,
 
-    #[test]
-    fn test_get_value_returns_default_value() {
-        let cli = cli();
-        assert_eq!(get_value(&cli, "WRONG_KEY", "not found"), "not found");
-    }
+    #[structopt(short = "z",
+                long = "kafka-port",
+                help = "The listened port by Kafka broker",
+                default_value = "8080")]
+    pub kafka_port: i32,
 }
