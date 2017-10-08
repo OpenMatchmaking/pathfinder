@@ -49,11 +49,11 @@ Each of those endpoints contains two fields:
 ```yaml
 endpoints:
   - search:
-    - url: "/api/matchmaking/search"
-    - microservice: "microservice.search"
+     url: "/api/matchmaking/search"
+     microservice: "microservice.search"
   - leaderboard:
-    - url: "/api/matchmaking/leaderboard"
-    - microservice: "microservice.leaderboard"
+     url: "/api/matchmaking/leaderboard"
+     microservice: "microservice.leaderboard"
 ```
 
 # Documentation
