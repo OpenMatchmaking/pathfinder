@@ -1,0 +1,12 @@
+endpoints:
+  - search:
+      microservice: "microservice.search"
+  - leaderboard:
+      url: "/api/matchmaking/leaderboard"
+      microsevice: "microservice.leaderboard"
+  - potg:
+      url: "/api/matchmaking/player-of-the-game"
+      microservice: "microservice.potg"
+websocket:
+  - ip: localhost
+  - port: 9000

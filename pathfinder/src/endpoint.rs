@@ -67,3 +67,42 @@ pub fn extract_endpoints(conf: Box<Config>) -> HashMap<String, String> {
 
     endpoints
 }
+
+
+#[cfg(test)]
+mod tests {
+    use super::super::config::{get_config};
+    use super::{extract_endpoints};
+
+    #[test]
+    fn test_extract_endpoints_returns_an_empty_dict_by_default() {
+        let conf = get_config(&"");
+        let endpoints = extract_endpoints(conf);
+        assert_eq!(endpoints.len(), 0);
+    }
+
+    #[test]
+    fn test_extract_endpoints_returns_an_empty_dict_for_a_file_without_endpoints() {
+        let conf = get_config(&"./tests/files/config_without_endpoints.yaml");
+        let endpoints = extract_endpoints(conf);
+        assert_eq!(endpoints.len(), 0);
+    }
+
+    #[test]
+    fn test_extract_endpoints_returns_dict_for_a_file_with_valid_endpoints() {
+        let conf = get_config(&"./tests/files/config_with_valid_endpoints.yaml");
+        let endpoints = extract_endpoints(conf);
+        assert_eq!(endpoints.len(), 3);
+        assert_eq!(endpoints.contains_key("/api/matchmaking/search"), true);
+        assert_eq!(endpoints.contains_key("/api/matchmaking/leaderboard"), true);
+        assert_eq!(endpoints.contains_key("/api/matchmaking/player-of-the-game"), true);
+    }
+
+    #[test]
+    fn test_extract_endpoints_returns_dict_without_invalid_endpoints() {
+        let conf = get_config(&"./tests/files/config_with_invalid_endpoints.yaml");
+        let endpoints = extract_endpoints(conf);
+        assert_eq!(endpoints.len(), 1);
+        assert_eq!(endpoints.contains_key("/api/matchmaking/player-of-the-game"), true);
+    }
+}

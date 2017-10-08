@@ -1,0 +1,10 @@
+endpoints:
+  - search:
+      url: "/api/matchmaking/search"
+      microservice: "microservice.search"
+  - leaderboard:
+      url: "/api/matchmaking/leaderboard"
+      microservice: "microservice.leaderboard"
+  - potg:
+      url: "/api/matchmaking/player-of-the-game"
+      microservice: "microservice.potg"

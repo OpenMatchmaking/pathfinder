@@ -1,0 +1,5 @@
+foo:
+  - bar
+websocket:
+  - ip: localhost
+  - port: 9000
