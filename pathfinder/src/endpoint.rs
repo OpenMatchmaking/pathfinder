@@ -32,7 +32,7 @@ fn get_value_from_config_as_str(conf: &HashMap<String, Value>, key: &str) -> Str
 
 /// Returns a HashMap so that it contains only mapping from URL into
 /// certain Kafka topic.
-pub fn extract_endpoints(conf: Box<Config>) -> HashMap<String, Endpoint> {
+pub fn extract_endpoints(conf: Box<Config>) -> HashMap<String, Box<Endpoint>> {
     let mut endpoints = HashMap::new();
 
     let config_endpoints: Vec<Value> = match conf.get_array("endpoints") {
@@ -62,24 +62,23 @@ pub fn extract_endpoints(conf: Box<Config>) -> HashMap<String, Endpoint> {
         };
 
         // Check on required fields
-        let mut missing_keys = false;
+        let mut missing_fields = Vec::new();
         let required_fields : HashSet<&str> = ["url", "microservice"].iter().cloned().collect();
         for key in required_fields  {
             if !configuration.contains_key(key) {
-                let error = format!("key \"{}\" for {} endpoint is missing.", key, endpoint);
-                println!("{}", PathfinderError::InvalidEndpoint(error));
-                missing_keys = true;
-                break;
+                missing_fields.push(key);
             }
         }
 
-        if missing_keys {
+        if missing_fields.len() > 0 {
+            let error = format!("keys {:?} for {} endpoint is missing.", missing_fields, endpoint);
+            println!("{}", PathfinderError::InvalidEndpoint(error));
             continue;
         }
 
         let url = get_value_from_config_as_str(&configuration, "url");
         let microservice = get_value_from_config_as_str(&configuration, "microservice");
-        let endpoint = Endpoint::new(&url, &microservice);
+        let endpoint = Box::new(Endpoint::new(&url, &microservice));
         endpoints.insert(url, endpoint);
     }
 
