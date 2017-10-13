@@ -5,6 +5,23 @@ use error::PathfinderError;
 use self::config::{Config, Value};
 
 
+#[derive(Debug)]
+pub struct Endpoint {
+    url: String,
+    microservice: String
+}
+
+
+impl Endpoint {
+    pub fn new(url: &str, microservice: &str) -> Endpoint {
+        Endpoint {
+            url: url.to_string(),
+            microservice: microservice.to_string()
+        }
+    }
+}
+
+
 fn get_value_from_config_as_str(conf: &HashMap<String, Value>, key: &str) -> String {
     match conf.get(key) {
         Some(value) => value.to_owned().into_str().unwrap(),
@@ -15,7 +32,7 @@ fn get_value_from_config_as_str(conf: &HashMap<String, Value>, key: &str) -> Str
 
 /// Returns a HashMap so that it contains only mapping from URL into
 /// certain Kafka topic.
-pub fn extract_endpoints(conf: Box<Config>) -> HashMap<String, String> {
+pub fn extract_endpoints(conf: Box<Config>) -> HashMap<String, Endpoint> {
     let mut endpoints = HashMap::new();
 
     let config_endpoints: Vec<Value> = match conf.get_array("endpoints") {
@@ -62,7 +79,8 @@ pub fn extract_endpoints(conf: Box<Config>) -> HashMap<String, String> {
 
         let url = get_value_from_config_as_str(&configuration, "url");
         let microservice = get_value_from_config_as_str(&configuration, "microservice");
-        endpoints.insert(url, microservice);
+        let endpoint = Endpoint::new(&url, &microservice);
+        endpoints.insert(url, endpoint);
     }
 
     endpoints
