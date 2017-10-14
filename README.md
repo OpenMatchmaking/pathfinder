@@ -1,20 +1,6 @@
 # pathfinder
 WebSocket-over-Kafka reverse proxy
 
-# Dependencies
-```toml
-[dependencies]
-structopt = "0.1.0"
-structopt-derive = "0.1.0"
-json = "0.11.9"
-ws = "0.7.3"
-config = "0.7.0"
-
-[dependencies.rdkafka]
-version = "0.12.0"
-features = ["ssl", "sasl"]
-```
-
 # Usage
 ```
 USAGE:
@@ -25,13 +11,13 @@ FLAGS:
     -V, --version    Prints version information
 
 OPTIONS:
-    -c, --config <config>            Path to a custom settings file [default: ]
+    -c, --config <config>            Path to a custom settings file [default: ""]
     -i, --ip <ip>                    The used IP for a server [default: 127.0.0.1]
     -x, --kafka-ip <kafka_ip>        The used IP by Kafka broker [default: 127.0.0.1]
     -z, --kafka-port <kafka_port>    The listened port by Kafka broker [default: 9092]
-    -p, --port <port>                The listened port [default: 8080]
-    -C, --cert <ssl_certificate>     Path to a SSL certificate [default: ]
-    -K, --key <ssl_public_key>       Path to a SSL public key [default: ]
+    -p, --port <port>                The listened port by Kafka broker [default: 8080]
+    -C, --cert <ssl_certificate>     Path to a SSL certificate [default: ""]
+    -K, --key <ssl_public_key>       Path to a SSL public key [default: ""]
 ```
 
 # Configuration file  
