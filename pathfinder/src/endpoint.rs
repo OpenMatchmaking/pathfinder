@@ -97,7 +97,7 @@ pub fn extract_endpoints(conf: Box<Config>) -> HashMap<String, Box<Endpoint>> {
 #[cfg(test)]
 mod tests {
     use super::super::config::{get_config};
-    use super::{extract_endpoints};
+    use super::{Endpoint, extract_endpoints};
 
     #[test]
     fn test_extract_endpoints_returns_an_empty_dict_by_default() {
@@ -129,5 +129,23 @@ mod tests {
         let endpoints = extract_endpoints(conf);
         assert_eq!(endpoints.len(), 1);
         assert_eq!(endpoints.contains_key("/api/matchmaking/player-of-the-game"), true);
+    }
+
+    #[test]
+    fn test_get_url() {
+        let url = "/api/matchmaking/test";
+        let microservice_name = "api.matchmaking.test";
+        let endpoint = Endpoint::new(url, microservice_name);
+
+        assert_eq!(endpoint.get_url(), url);
+    }
+
+    #[test]
+    fn test_get_microservice_name() {
+        let url = "/api/matchmaking/test";
+        let microservice_name = "api.matchmaking.test";
+        let endpoint = Endpoint::new(url, microservice_name);
+
+        assert_eq!(endpoint.get_microservice(), microservice_name);
     }
 }
