@@ -3,8 +3,13 @@ extern crate config;
 use std::io;
 use std::error;
 use std::fmt;
+use std::result;
 
 use self::config::{ConfigError};
+
+
+/// Helper alias for `Result` objects that return a Pathfinder error.
+pub type Result<T> = result::Result<T, PathfinderError>;
 
 
 #[derive(Debug)]
@@ -16,7 +21,10 @@ pub enum PathfinderError {
     SettingsError(ConfigError),
     /// Occurs when an inner structure of an endpoint is invalid.
     /// For example: missed fields or invalid format.
-    InvalidEndpoint(String)
+    InvalidEndpoint(String),
+    /// Occurs when router is trying to get an access to an endpoint, that
+    /// doesn't not exist.
+    EndpointNotFound(String)
 }
 
 
@@ -26,6 +34,7 @@ impl fmt::Display for PathfinderError {
             PathfinderError::Io(ref err) => write!(f, "IO error: {}", err),
             PathfinderError::SettingsError(ref err) => write!(f, "Settings error: {}", err),
             PathfinderError::InvalidEndpoint(ref s) => write!(f, "Parse error: {}", s),
+            PathfinderError::EndpointNotFound(ref s) => write!(f, "Endpoint \"{}\" was not found", s),
         }
     }
 }

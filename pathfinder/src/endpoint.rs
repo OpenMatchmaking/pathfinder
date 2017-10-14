@@ -5,7 +5,7 @@ use error::PathfinderError;
 use self::config::{Config, Value};
 
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Endpoint {
     url: String,
     microservice: String
@@ -18,6 +18,14 @@ impl Endpoint {
             url: url.to_string(),
             microservice: microservice.to_string()
         }
+    }
+
+    pub fn get_url(&self) -> String {
+        self.url.clone()
+    }
+
+    pub fn get_microservice(&self) -> String {
+        self.microservice.clone()
     }
 }
 
