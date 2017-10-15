@@ -1,10 +1,11 @@
-extern crate structopt;
-#[macro_use]
-extern crate structopt_derive;
 extern crate futures;
+extern crate json;
 extern crate tokio_core;
 extern crate tokio_tungstenite;
 extern crate tungstenite;
+extern crate structopt;
+#[macro_use]
+extern crate structopt_derive;
 
 mod cli;
 mod config;
