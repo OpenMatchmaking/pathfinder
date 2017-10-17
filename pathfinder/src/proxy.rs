@@ -38,7 +38,7 @@ impl Proxy {
             // Handler per each connection.
             accept_async(stream)
                 .map_err(|err| {
-                    println!("Occurred error during the WebSocket handshake: {}", err);
+                    println!("An error occurred during the WebSocket handshake: {}", err);
                     Error::new(ErrorKind::Other, err)
                 })
                 // Check the Auth header
@@ -61,10 +61,13 @@ impl Proxy {
                         let microservice = proxy_inner.match_microservice(json_message);
                         Ok(())
                     })
-                    .map_err(|err| {
-                        println!("Occurred error during the processing a message: {}", err);
-                        Error::new(ErrorKind::Other, err)
+                    .or_else(|err| {
+                        println!("An error occurred during processing a message: {}", err);
+                        Ok(())
                     })
+                }).or_else(|err| {
+                    println!("An error occurred with the WebSocket connection: {}", err);
+                    Ok(())
                 })
         });
 
