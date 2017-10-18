@@ -10,6 +10,7 @@ extern crate structopt_derive;
 mod cli;
 mod config;
 mod endpoint;
+mod engine;
 mod error;
 mod proxy;
 mod router;
