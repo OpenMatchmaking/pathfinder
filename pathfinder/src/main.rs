@@ -1,4 +1,5 @@
 extern crate futures;
+#[macro_use]
 extern crate json;
 extern crate tokio_core;
 extern crate tokio_tungstenite;
@@ -14,6 +15,7 @@ mod engine;
 mod error;
 mod proxy;
 mod router;
+mod serializer;
 
 use cli::{CliOptions};
 use config::{get_config};

@@ -1,7 +1,6 @@
 use std::cell::{RefCell};
 use std::collections::{HashMap};
 use std::net::{SocketAddr};
-use std::result::{Result as BaseResult};
 use std::rc::{Rc};
 
 use super::engine::{Engine};
