@@ -13,6 +13,10 @@ impl Serializer {
         Serializer {}
     }
 
+    pub fn serialize(&self, message: String) -> Result<Message> {
+        Ok(Message::Text(message))
+    }
+
     pub fn deserialize(&self, message: &Message) -> Result<Box<JsonValue>> {
          let text_message = try!(self.parse_into_text(message));
          let mut json_message = try!(self.parse_into_json(text_message.as_str()));

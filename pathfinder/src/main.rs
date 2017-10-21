@@ -7,6 +7,7 @@ extern crate tungstenite;
 extern crate structopt;
 #[macro_use]
 extern crate structopt_derive;
+extern crate uuid;
 
 mod cli;
 mod config;
