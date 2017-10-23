@@ -5,7 +5,6 @@ use super::error::{Result, PathfinderError};
 use super::endpoint::{Endpoint};
 
 
-
 pub struct Router {
     endpoints: HashMap<String, Box<Endpoint>>
 }

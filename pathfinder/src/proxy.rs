@@ -1,12 +1,14 @@
-use std::io::{Error, ErrorKind};
-use std::net::SocketAddr;
-use std::result::{Result as BaseResult};
+use std::cell::{RefCell};
+use std::collections::{HashMap};
+use std::net::{SocketAddr};
+use std::rc::{Rc};
 
+use super::engine::{Engine};
 use super::router::{Router};
 
+use futures::sync::{mpsc};
 use futures::{Future, Sink};
 use futures::stream::{Stream};
-use json::{parse as parse_json, JsonValue};
 use tokio_core::net::{TcpListener};
 use tokio_core::reactor::{Core};
 use tokio_tungstenite::{accept_async};
@@ -14,14 +16,16 @@ use tungstenite::protocol::{Message};
 
 
 pub struct Proxy {
-    router: Box<Router>,
+    engine: Rc<RefCell<Engine>>,
+    connections: Rc<RefCell<HashMap<SocketAddr, mpsc::UnboundedSender<Message>>>>
 }
 
 
 impl Proxy {
     pub fn new(router: Box<Router>) -> Proxy {
         Proxy {
-            router: router
+            engine: Rc::new(RefCell::new(Engine::new(router))),
+            connections: Rc::new(RefCell::new(HashMap::new()))
         }
     }
 
@@ -31,16 +35,12 @@ impl Proxy {
         let socket = TcpListener::bind(&address, &handle).unwrap();
         println!("Listening on: {}", address);
 
-        // The server loop.
-        let server = socket.incoming().for_each(|(stream, _addr)| {
-            let proxy_inner = self;
+        let server = socket.incoming().for_each(|(stream, addr)| {
+            let engine_inner = self.engine.clone();
+            let connections_inner = self.connections.clone();
+            let handle_inner = handle.clone();
 
-            // Handler per each connection.
             accept_async(stream)
-                .map_err(|err| {
-                    println!("An error occurred during the WebSocket handshake: {}", err);
-                    Error::new(ErrorKind::Other, err)
-                })
                 // Check the Auth header
                 .and_then(move |ws_stream| {
                     println!("Checking the user's token");
@@ -48,63 +48,48 @@ impl Proxy {
                 })
                 // Process the messages
                 .and_then(move |ws_stream| {
-                    let (_sink, stream) = ws_stream.split();
+                    // Create a channel for the stream, which other sockets will use to
+                    // send us messages. It could be used for broadcasting your data to
+                    // another users in the future.
+                    let (tx, rx) = mpsc::unbounded();
+                    connections_inner.borrow_mut().insert(addr, tx);
 
-                    // Per each message
-                    stream.for_each(move |message: Message| {
-                        // Convert an incoming message into JSON
-                        let text_message = try!(message.into_text());
-                        let parsed_json = try!(proxy_inner.decode_message(text_message.as_str()));
+                    // Split the WebSocket stream so that it will be possible to work
+                    // with the reading and writing halves separately.
+                    let (sink, stream) = ws_stream.split();
 
-                        // Convert the specified API url to a Kafka topic
-                        let json_message = try!(proxy_inner.validate_json(parsed_json));
-                        let microservice = proxy_inner.match_microservice(json_message);
+                    // Read and process each message
+                    let connections = connections_inner.clone();
+                    let ws_reader = stream.for_each(move |message: Message| {
+                        engine_inner.borrow().handle(&message, &addr, &connections);
                         Ok(())
-                    })
-                    .or_else(|err| {
-                        println!("An error occurred during processing a message: {}", err);
+                    });
+
+                    // Write back prepared responses
+                    let ws_writer = rx.fold(sink, |mut sink, msg| {
+                        sink.start_send(msg).unwrap();
+                        Ok(sink)
+                    });
+
+                    // Wait for either half to be done to tear down the other
+                    let connection = ws_reader.map(|_| ()).map_err(|_| ())
+                                              .select(ws_writer.map(|_| ()).map_err(|_| ()));
+
+                    // Close the connection after using
+                    handle_inner.spawn(connection.then(move |_| {
+                        connections_inner.borrow_mut().remove(&addr);
+                        println!("Connection {} closed.", addr);
                         Ok(())
-                    })
+                    }));
+
+                    Ok(())
                 }).or_else(|err| {
-                    println!("An error occurred with the WebSocket connection: {}", err);
+                    println!("An error occurred during the WebSocket handshake: {}", err);
                     Ok(())
                 })
         });
 
         // Run the server
         core.run(server).unwrap();
-    }
-
-    fn decode_message(&self, message: &str) -> BaseResult<Box<JsonValue>, Error> {
-        match parse_json(message) {
-            Ok(message) => Ok(Box::new(message)),
-            Err(err) => Err(Error::new(ErrorKind::InvalidData, err))
-        }
-    }
-
-    fn validate_json(&self, json: Box<JsonValue>) -> BaseResult<Box<JsonValue>, Error> {
-        if !json.has_key("url") {
-            return Err(Error::new(ErrorKind::Other, "Key `url` is missing or value is `null`"));
-        }
-
-        if json.has_key("matchmaking") {
-            return Err(Error::new(ErrorKind::Other, "Key `matchmaking` must be not specified"));
-        }
-
-        Ok(json)
-    }
-
-    fn match_microservice(&self, json: Box<JsonValue>) -> String {
-        let url = json["url"].as_str().unwrap();
-
-        match self.router.match_url(url) {
-            Ok(endpoint) => endpoint.get_microservice(),
-            _ => {
-                let mut external_url = url.clone();
-                external_url = external_url.trim_left_matches("/");
-                external_url = external_url.trim_right_matches("/");
-                external_url.replace("/", ".")
-            }
-        }
     }
 }
