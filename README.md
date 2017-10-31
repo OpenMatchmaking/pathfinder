@@ -8,6 +8,7 @@ USAGE:
 
 FLAGS:
     -h, --help       Prints help information
+    -v, --validate    Validate WebSocket header with token
     -V, --version    Prints version information
 
 OPTIONS:
@@ -15,7 +16,9 @@ OPTIONS:
     -i, --ip <ip>                    The used IP for a server [default: 127.0.0.1]
     -x, --kafka-ip <kafka_ip>        The used IP by Kafka broker [default: 127.0.0.1]
     -z, --kafka-port <kafka_port>    The listened port by Kafka broker [default: 9092]
-    -p, --port <port>                The listened port by Kafka broker [default: 8080]
+    -p, --port <port>                The listened port [default: 8080]
+    -r, --redis-ip <redis_ip>        The used IP by Redis [default: 127.0.0.1]
+    -t, --redis-port <redis_port>    The listened port by Redis [default: 6376]
     -C, --cert <ssl_certificate>     Path to a SSL certificate [default: ""]
     -K, --key <ssl_public_key>       Path to a SSL public key [default: ""]
 ```

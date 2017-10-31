@@ -4,7 +4,6 @@ extern crate structopt;
 #[derive(StructOpt, Debug)]
 #[structopt(name = "Pathfinder",
             version = "0.1.0",
-            author = "Valeryi Savich <relrin78@gmail.com>",
             about = "WebSocket-over-Kafka reverse proxy")]
 pub struct CliOptions {
     #[structopt(short = "c",
@@ -48,4 +47,21 @@ pub struct CliOptions {
                 help = "The listened port by Kafka broker",
                 default_value = "9092")]
     pub kafka_port: i32,
+
+    #[structopt(short = "r",
+                long = "redis-ip",
+                help = "The used IP by Redis",
+                default_value = "127.0.0.1")]
+    pub redis_ip: String,
+
+    #[structopt(short = "t",
+                long = "redis-port",
+                help = "The listened port by Redis",
+                default_value = "6376")]
+    pub redis_port: i32,
+
+    #[structopt(short = "v",
+                long = "validate",
+                help = "Validate WebSocket header with token")]
+    pub validate: bool,
 }

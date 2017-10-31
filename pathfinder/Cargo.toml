@@ -17,6 +17,7 @@ futures = "0.1.16"
 tungstenite = "0.5.0"
 tokio-core = "0.1.10"
 uuid = { version = "0.5", features = ["v4"] }
+redis-async = "0.0.6"
 
 [dependencies.rdkafka]
 version = "0.12.0"
