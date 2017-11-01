@@ -45,10 +45,7 @@ pub fn extract_endpoints(conf: Box<Config>) -> HashMap<String, Box<Endpoint>> {
 
     let config_endpoints: Vec<Value> = match conf.get_array("endpoints") {
         Ok(array) => array,
-        Err(why) => {
-            println!("{}", PathfinderError::SettingsError(why));
-            Vec::new()
-        }
+        Err(_) => Vec::new()
     };
 
     for endpoint in &config_endpoints {

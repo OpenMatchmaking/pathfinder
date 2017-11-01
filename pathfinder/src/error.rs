@@ -28,6 +28,8 @@ pub enum PathfinderError {
     /// Occurs during processing an incoming message (e.g. parsing,
     /// converting into JSON)
     DecodingError(String),
+    /// The error that occurred when token isn't specified or invalid.
+    AuthenticationError(String),
 }
 
 
@@ -39,6 +41,7 @@ impl fmt::Display for PathfinderError {
             PathfinderError::InvalidEndpoint(ref s) => write!(f, "Parse error: {}", s),
             PathfinderError::EndpointNotFound(ref s) => write!(f, "Endpoint \"{}\" was not found", s),
             PathfinderError::DecodingError(ref s) => write!(f, "Decoding error: {}", s),
+            PathfinderError::AuthenticationError(ref s) => write!(f, "Authentication error: {}", s),
         }
     }
 }

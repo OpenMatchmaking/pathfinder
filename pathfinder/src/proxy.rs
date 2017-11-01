@@ -2,10 +2,13 @@ use std::cell::{RefCell};
 use std::collections::{HashMap};
 use std::net::{SocketAddr};
 use std::rc::{Rc};
+use std::vec::{Vec};
 
 use super::engine::{Engine};
 use super::router::{Router};
+use super::middleware::{Middleware, EmptyMiddleware, AuthTokenMiddleware};
 
+use cli::{CliOptions};
 use futures::sync::{mpsc};
 use futures::{Future, Sink};
 use futures::stream::{Stream};
@@ -17,15 +20,24 @@ use tungstenite::protocol::{Message};
 
 pub struct Proxy {
     engine: Rc<RefCell<Engine>>,
-    connections: Rc<RefCell<HashMap<SocketAddr, mpsc::UnboundedSender<Message>>>>
+    connections: Rc<RefCell<HashMap<SocketAddr, mpsc::UnboundedSender<Message>>>>,
+    middlewares: Box<Vec<Box<Middleware>>>,
 }
 
 
 impl Proxy {
-    pub fn new(router: Box<Router>) -> Proxy {
+    pub fn new(router: Box<Router>, cli: &CliOptions) -> Proxy {
+        let mut middlewares = Vec::new();
+        let auth_middleware: Box<Middleware> = match cli.validate {
+            true => Box::new(AuthTokenMiddleware::new()),
+            _ => Box::new(EmptyMiddleware::new())
+        };
+        middlewares.push(auth_middleware);
+
         Proxy {
             engine: Rc::new(RefCell::new(Engine::new(router))),
-            connections: Rc::new(RefCell::new(HashMap::new()))
+            connections: Rc::new(RefCell::new(HashMap::new())),
+            middlewares: Box::new(middlewares),
         }
     }
 
@@ -38,12 +50,15 @@ impl Proxy {
         let server = socket.incoming().for_each(|(stream, addr)| {
             let engine_inner = self.engine.clone();
             let connections_inner = self.connections.clone();
+            let middlewares = &self.middlewares;
             let handle_inner = handle.clone();
 
             accept_async(stream)
                 // Check the Auth header
                 .and_then(move |ws_stream| {
-                    println!("Checking the user's token");
+                    for middleware in middlewares.iter() {
+                        middleware.process_request();
+                    }
                     Ok(ws_stream)
                 })
                 // Process the messages

@@ -14,6 +14,7 @@ mod config;
 mod endpoint;
 mod engine;
 mod error;
+mod middleware;
 mod proxy;
 mod router;
 mod serializer;
@@ -32,7 +33,7 @@ fn main() {
     let endpoints = extract_endpoints(config);
     let router = Box::new(Router::new(endpoints));
 
-    let proxy = Box::new(Proxy::new(router));
+    let proxy = Box::new(Proxy::new(router, &cli));
     let address = format!("{}:{}", cli.ip, cli.port).parse().unwrap();
     proxy.run(address);
 }
