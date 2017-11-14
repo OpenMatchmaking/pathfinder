@@ -2,7 +2,6 @@ use std::cell::{RefCell};
 use std::collections::{HashMap};
 use std::net::{SocketAddr};
 use std::rc::{Rc};
-use std::vec::{Vec};
 
 use super::engine::{Engine};
 use super::router::{Router};
@@ -21,23 +20,21 @@ use tungstenite::protocol::{Message};
 pub struct Proxy {
     engine: Rc<RefCell<Engine>>,
     connections: Rc<RefCell<HashMap<SocketAddr, mpsc::UnboundedSender<Message>>>>,
-    middlewares: Box<Vec<Box<Middleware>>>,
+    auth_middleware: Rc<RefCell<Box<Middleware>>>,
 }
 
 
 impl Proxy {
     pub fn new(router: Box<Router>, cli: &CliOptions) -> Proxy {
-        let mut middlewares = Vec::new();
         let auth_middleware: Box<Middleware> = match cli.validate {
             true => Box::new(AuthTokenMiddleware::new()),
             _ => Box::new(EmptyMiddleware::new())
         };
-        middlewares.push(auth_middleware);
 
         Proxy {
             engine: Rc::new(RefCell::new(Engine::new(router))),
             connections: Rc::new(RefCell::new(HashMap::new())),
-            middlewares: Box::new(middlewares),
+            auth_middleware: Rc::new(RefCell::new(auth_middleware)),
         }
     }
 
@@ -50,15 +47,13 @@ impl Proxy {
         let server = socket.incoming().for_each(|(stream, addr)| {
             let engine_inner = self.engine.clone();
             let connections_inner = self.connections.clone();
-            let middlewares = &self.middlewares;
+            let auth_middleware_inner = self.auth_middleware.clone();
             let handle_inner = handle.clone();
 
             accept_async(stream)
                 // Check the Auth header
                 .and_then(move |ws_stream| {
-                    for middleware in middlewares.iter() {
-                        middleware.process_request();
-                    }
+                    auth_middleware_inner.borrow().process_request();
                     Ok(ws_stream)
                 })
                 // Process the messages

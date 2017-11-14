@@ -8,8 +8,9 @@ pub trait Middleware {
 }
 
 
-/// Default class which is used for reverse proxy without authentication validator.
-pub struct EmptyMiddleware {}
+/// Default class which is used for reverse proxy without an authentication
+/// header validation process.
+pub struct EmptyMiddleware;
 
 
 impl EmptyMiddleware {
@@ -21,7 +22,6 @@ impl EmptyMiddleware {
 
 impl Middleware for EmptyMiddleware {
     fn process_request(&self) -> Result<()> {
-        println!("Empty!");
         Ok(())
     }
 }
@@ -29,7 +29,7 @@ impl Middleware for EmptyMiddleware {
 
 /// A middleware class, that will check a specified token in WebSocket
 /// headers. Otherwise returns an error, if it isn't specified or invalid.
-pub struct AuthTokenMiddleware {}
+pub struct AuthTokenMiddleware;
 
 
 impl AuthTokenMiddleware {
@@ -41,7 +41,6 @@ impl AuthTokenMiddleware {
 
 impl Middleware for AuthTokenMiddleware {
     fn process_request(&self) -> Result<()> {
-        println!("Secured!");
         Ok(())
     }
 }
