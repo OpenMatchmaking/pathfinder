@@ -1,5 +1,7 @@
 use super::error::{Result};
 
+use cli::{CliOptions};
+
 
 pub trait Middleware {
     /// Applied transforms and checks to an incoming request. If it failed,
@@ -14,7 +16,7 @@ pub struct EmptyMiddleware;
 
 
 impl EmptyMiddleware {
-    pub fn new() -> EmptyMiddleware {
+    pub fn new(_cli: &CliOptions) -> EmptyMiddleware {
         EmptyMiddleware {}
     }
 }
@@ -33,8 +35,8 @@ pub struct AuthTokenMiddleware;
 
 
 impl AuthTokenMiddleware {
-    pub fn new() -> AuthTokenMiddleware {
-        AuthTokenMiddleware {}
+    pub fn new(_cli: &CliOptions) -> AuthTokenMiddleware {
+        AuthTokenMiddleware { }
     }
 }
 

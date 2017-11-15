@@ -27,8 +27,8 @@ pub struct Proxy {
 impl Proxy {
     pub fn new(router: Box<Router>, cli: &CliOptions) -> Proxy {
         let auth_middleware: Box<Middleware> = match cli.validate {
-            true => Box::new(AuthTokenMiddleware::new()),
-            _ => Box::new(EmptyMiddleware::new())
+            true => Box::new(AuthTokenMiddleware::new(cli)),
+            _ => Box::new(EmptyMiddleware::new(cli))
         };
 
         Proxy {
