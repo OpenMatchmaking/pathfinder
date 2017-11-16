@@ -13,7 +13,8 @@ use futures::{Future, Sink};
 use futures::stream::{Stream};
 use tokio_core::net::{TcpListener};
 use tokio_core::reactor::{Core};
-use tokio_tungstenite::{accept_async};
+use tokio_tungstenite::{accept_hdr_async};
+use tungstenite::handshake::server::{Request};
 use tungstenite::protocol::{Message};
 
 
@@ -28,7 +29,7 @@ impl Proxy {
     pub fn new(router: Box<Router>, cli: &CliOptions) -> Proxy {
         let auth_middleware: Box<Middleware> = match cli.validate {
             true => Box::new(AuthTokenMiddleware::new(cli)),
-            _ => Box::new(EmptyMiddleware::new(cli))
+               _ => Box::new(EmptyMiddleware::new(cli))
         };
 
         Proxy {
@@ -47,15 +48,24 @@ impl Proxy {
         let server = socket.incoming().for_each(|(stream, addr)| {
             let engine_inner = self.engine.clone();
             let connections_inner = self.connections.clone();
-            let auth_middleware_inner = self.auth_middleware.clone();
             let handle_inner = handle.clone();
 
-            accept_async(stream)
-                // Check the Auth header
-                .and_then(move |ws_stream| {
-                    auth_middleware_inner.borrow().process_request();
-                    Ok(ws_stream)
-                })
+            let auth_middleware_callback = |req: &Request| {
+                println!("Received a new ws handshake");
+                println!("The request's path is: {}", req.path);
+                println!("The request's headers are:");
+                for &(ref header, ref value) in req.headers.iter() {
+                    use std::str;
+                    let v = str::from_utf8(value).unwrap();
+                    println!("* {}: {:?}", header, v);
+                }
+
+                let auth_middleware_inner = self.auth_middleware.clone();
+                let _result = auth_middleware_inner.borrow().process_request();
+                Ok(None)
+            };
+
+            accept_hdr_async(stream, auth_middleware_callback)
                 // Process the messages
                 .and_then(move |ws_stream| {
                     // Create a channel for the stream, which other sockets will use to
