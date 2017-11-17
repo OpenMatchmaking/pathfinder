@@ -14,6 +14,7 @@ use futures::stream::{Stream};
 use tokio_core::net::{TcpListener};
 use tokio_core::reactor::{Core};
 use tokio_tungstenite::{accept_hdr_async};
+use tungstenite::error::{Error as TungsteniteError};
 use tungstenite::handshake::server::{Request};
 use tungstenite::protocol::{Message};
 
@@ -50,19 +51,23 @@ impl Proxy {
             let connections_inner = self.connections.clone();
             let handle_inner = handle.clone();
 
-            let auth_middleware_callback = |req: &Request| {
-                println!("Received a new ws handshake");
-                println!("The request's path is: {}", req.path);
-                println!("The request's headers are:");
-                for &(ref header, ref value) in req.headers.iter() {
-                    use std::str;
-                    let v = str::from_utf8(value).unwrap();
-                    println!("* {}: {:?}", header, v);
-                }
-
+            let auth_middleware_callback = |request: &Request| {
                 let auth_middleware_inner = self.auth_middleware.clone();
-                let _result = auth_middleware_inner.borrow().process_request();
-                Ok(None)
+                let processing_result = auth_middleware_inner.borrow().process_request(request);
+
+                match processing_result {
+                    Ok(_) => Ok(None),
+                    Err(err) => {
+                        let formatted_error = format!("{}", err);
+                        let message = formatted_error.into_bytes();
+
+                        let (_, rx) = stream.split();
+                        use futures::Stream;
+                        rx.write_all(message).unwrap();
+                        rx.flush();
+                        Err(TungsteniteError::Http(401))
+                    }
+                }
             };
 
             accept_hdr_async(stream, auth_middleware_callback)
