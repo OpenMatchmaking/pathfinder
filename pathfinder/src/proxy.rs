@@ -1,5 +1,7 @@
+use std::borrow::{Cow};
 use std::cell::{RefCell};
 use std::collections::{HashMap};
+use std::error::{Error};
 use std::net::{SocketAddr};
 use std::rc::{Rc};
 
@@ -56,16 +58,11 @@ impl Proxy {
                 let processing_result = auth_middleware_inner.borrow().process_request(request);
 
                 match processing_result {
-                    Ok(_) => Ok(None),
+                    Ok(headers) => Ok(headers),
                     Err(err) => {
                         let formatted_error = format!("{}", err);
-                        let message = formatted_error.into_bytes();
-
-                        let (_, rx) = stream.split();
-                        use futures::Stream;
-                        rx.write_all(message).unwrap();
-                        rx.flush();
-                        Err(TungsteniteError::Http(401))
+                        let message = Cow::from(formatted_error);
+                        Err(TungsteniteError::Protocol(message))
                     }
                 }
             };
@@ -108,8 +105,10 @@ impl Proxy {
                     }));
 
                     Ok(())
-                }).or_else(|err| {
-                    println!("An error occurred during the WebSocket handshake: {}", err);
+                })
+                // An error ocurred during the WebSocket handshake
+                .or_else(|err| {
+                    println!("{}", err.description());
                     Ok(())
                 })
         });

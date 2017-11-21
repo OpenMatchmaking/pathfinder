@@ -38,10 +38,10 @@ impl fmt::Display for PathfinderError {
         match *self {
             PathfinderError::Io(ref err) => write!(f, "IO error: {}", err),
             PathfinderError::SettingsError(ref err) => write!(f, "Settings error: {}", err),
-            PathfinderError::InvalidEndpoint(ref s) => write!(f, "Parse error: {}", s),
-            PathfinderError::EndpointNotFound(ref s) => write!(f, "Endpoint \"{}\" was not found", s),
-            PathfinderError::DecodingError(ref s) => write!(f, "Decoding error: {}", s),
-            PathfinderError::AuthenticationError(ref s) => write!(f, "Authentication error: {}", s),
+            PathfinderError::InvalidEndpoint(ref msg) => write!(f, "Parse error: {}", msg),
+            PathfinderError::EndpointNotFound(ref msg) => write!(f, "Endpoint \"{}\" was not found", msg),
+            PathfinderError::DecodingError(ref msg) => write!(f, "Decoding error: {}", msg),
+            PathfinderError::AuthenticationError(ref msg) => write!(f, "Authentication error: {}", msg),
         }
     }
 }
