@@ -1,6 +1,7 @@
 extern crate futures;
 #[macro_use]
 extern crate json;
+extern crate jsonwebtoken;
 extern crate tokio_core;
 extern crate tokio_tungstenite;
 extern crate tungstenite;
@@ -15,6 +16,7 @@ mod endpoint;
 mod engine;
 mod error;
 mod middleware;
+mod token;
 mod proxy;
 mod router;
 mod serializer;

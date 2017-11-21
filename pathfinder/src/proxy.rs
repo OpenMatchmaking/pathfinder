@@ -7,7 +7,8 @@ use std::rc::{Rc};
 
 use super::engine::{Engine};
 use super::router::{Router};
-use super::middleware::{Middleware, EmptyMiddleware, AuthTokenMiddleware};
+use super::middleware::{Middleware, EmptyMiddleware};
+use super::token::middleware::{JwtTokenMiddleware};
 
 use cli::{CliOptions};
 use futures::sync::{mpsc};
@@ -31,7 +32,7 @@ pub struct Proxy {
 impl Proxy {
     pub fn new(router: Box<Router>, cli: &CliOptions) -> Proxy {
         let auth_middleware: Box<Middleware> = match cli.validate {
-            true => Box::new(AuthTokenMiddleware::new(cli)),
+            true => Box::new(JwtTokenMiddleware::new(cli)),
                _ => Box::new(EmptyMiddleware::new(cli))
         };
 
