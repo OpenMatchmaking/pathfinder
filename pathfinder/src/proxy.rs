@@ -106,7 +106,7 @@ impl Proxy {
 
                     Ok(())
                 })
-                // An error ocurred during the WebSocket handshake
+                // An error occurred during the WebSocket handshake
                 .or_else(|err| {
                     println!("{}", err.description());
                     Ok(())
