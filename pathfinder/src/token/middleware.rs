@@ -10,12 +10,16 @@ use tungstenite::handshake::server::{Request};
 
 /// A middleware class, that will check a specified token in WebSocket
 /// headers. Otherwise returns an error, if it isn't specified or invalid.
-pub struct JwtTokenMiddleware;
+pub struct JwtTokenMiddleware {
+    jwt_secret: String
+}
 
 
 impl JwtTokenMiddleware {
-    pub fn new(_cli: &CliOptions) -> JwtTokenMiddleware {
-        JwtTokenMiddleware { }
+    pub fn new(cli: &CliOptions) -> JwtTokenMiddleware {
+        JwtTokenMiddleware {
+            jwt_secret: cli.jwt_secret_key.clone()
+        }
     }
 }
 

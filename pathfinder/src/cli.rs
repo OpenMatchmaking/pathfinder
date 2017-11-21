@@ -72,6 +72,12 @@ pub struct CliOptions {
                 default_value = "")]
     pub redis_password: String,
 
+    #[structopt(short = "k",
+                long = "jwt-secret",
+                help = "Secret key for a JWT validation",
+                default_value = "secret")]
+    pub jwt_secret_key: String,
+
     #[structopt(short = "v",
                 long = "validate",
                 help = "Validate WebSocket header with token")]
