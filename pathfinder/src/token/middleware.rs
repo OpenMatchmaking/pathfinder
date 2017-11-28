@@ -48,6 +48,14 @@ impl JwtTokenMiddleware {
         validation.set_audience(&user_id);
         validation
     }
+
+    fn get_user_id(&self) -> Result<String> {
+        Ok(String::from("test"))
+//        Err(_) => {
+//            let message = String::from("Token is expired or doesn't exist.");
+//            Err(PathfinderError::AuthenticationError(message))
+//        }
+    }
 }
 
 
@@ -55,18 +63,20 @@ impl Middleware for JwtTokenMiddleware {
     fn process_request(&self, request: &Request) -> Result<Option<Vec<(String, String)>>> {
         match request.headers.find_first("Sec-WebSocket-Protocol") {
              Some(raw_token) => {
+                 // Try to fetch token after handshake
                  let extracted_token = self.extract_token_from_header(raw_token)?;
 
-                 // TODO: fetch user_id from redis by token if exists
-                 let user_id = "test";
+                 // Validate the passed token with request
+                 let user_id = self.get_user_id()?;
                  let validation_struct = self.get_validation_struct(user_id);
                  let _token = validate_token(&extracted_token, &self.jwt_secret, &validation_struct)?;
 
+                 // Return validated header as is
                  let extra_headers = vec![(String::from("Sec-WebSocket-Protocol"), extracted_token)];
                  Ok(Some(extra_headers))
              },
              None => {
-                 let message = String::from("Token was not found");
+                 let message = String::from("Token was not specified.");
                  Err(PathfinderError::AuthenticationError(message))
              }
         }
