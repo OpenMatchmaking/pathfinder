@@ -7,6 +7,7 @@ use super::super::middleware::{Middleware};
 
 use cli::{CliOptions};
 use jsonwebtoken::{Validation, Algorithm};
+use tokio_core::reactor::{Handle};
 use tungstenite::handshake::server::{Request};
 
 
@@ -49,7 +50,7 @@ impl JwtTokenMiddleware {
         validation
     }
 
-    fn get_user_id(&self) -> Result<String> {
+    fn get_user_id(&self, _handle: &Handle) -> Result<String> {
         Ok(String::from("test"))
 //        Err(_) => {
 //            let message = String::from("Token is expired or doesn't exist.");
@@ -60,15 +61,15 @@ impl JwtTokenMiddleware {
 
 
 impl Middleware for JwtTokenMiddleware {
-    fn process_request(&self, request: &Request) -> Result<Option<Vec<(String, String)>>> {
+    fn process_request(&self, request: &Request, handle: &Handle) -> Result<Option<Vec<(String, String)>>> {
         match request.headers.find_first("Sec-WebSocket-Protocol") {
              Some(raw_token) => {
                  // Try to fetch token after handshake
                  let extracted_token = self.extract_token_from_header(raw_token)?;
 
                  // Validate the passed token with request
-                 let user_id = self.get_user_id()?;
-                 let validation_struct = self.get_validation_struct(user_id);
+                 let user_id = self.get_user_id(handle)?;
+                 let validation_struct = self.get_validation_struct(&user_id);
                  let _token = validate_token(&extracted_token, &self.jwt_secret, &validation_struct)?;
 
                  // Return validated header as is

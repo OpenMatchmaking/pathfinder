@@ -55,8 +55,9 @@ impl Proxy {
             let handle_inner = handle.clone();
 
             let auth_middleware_callback = |request: &Request| {
+                let handle_inner = handle.clone();
                 let auth_middleware_inner = self.auth_middleware.clone();
-                let processing_result = auth_middleware_inner.borrow().process_request(request);
+                let processing_result = auth_middleware_inner.borrow().process_request(request, &handle_inner);
 
                 match processing_result {
                     Ok(headers) => Ok(headers),
