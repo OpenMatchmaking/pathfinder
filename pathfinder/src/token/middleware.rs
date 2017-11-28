@@ -1,10 +1,12 @@
 use std::str;
 use std::vec::{Vec};
 
+use super::jwt::{DEFAULT_ISSUER, validate as validate_token};
 use super::super::error::{Result, PathfinderError};
 use super::super::middleware::{Middleware};
 
 use cli::{CliOptions};
+use jsonwebtoken::{Validation, Algorithm};
 use tungstenite::handshake::server::{Request};
 
 
@@ -31,6 +33,21 @@ impl JwtTokenMiddleware {
             }
         }
     }
+
+    fn get_validation_struct(&self, user_id: &str) -> Validation {
+        let mut validation = Validation {
+            leeway: 0,
+            validate_exp: true,
+            validate_iat: true,
+            validate_nbf: true,
+            iss: Some(String::from(DEFAULT_ISSUER)),
+            sub: None,
+            aud: None,
+            algorithms: Some(vec![Algorithm::HS512]),
+        };
+        validation.set_audience(&user_id);
+        validation
+    }
 }
 
 
@@ -38,8 +55,14 @@ impl Middleware for JwtTokenMiddleware {
     fn process_request(&self, request: &Request) -> Result<Option<Vec<(String, String)>>> {
         match request.headers.find_first("Sec-WebSocket-Protocol") {
              Some(raw_token) => {
-                 let token = self.extract_token_from_header(raw_token)?;
-                 let extra_headers = vec![(String::from("Sec-WebSocket-Protocol"), token)];
+                 let extracted_token = self.extract_token_from_header(raw_token)?;
+
+                 // TODO: fetch user_id from redis by token if exists
+                 let user_id = "test";
+                 let validation_struct = self.get_validation_struct(user_id);
+                 let _token = validate_token(&extracted_token, &self.jwt_secret, &validation_struct)?;
+
+                 let extra_headers = vec![(String::from("Sec-WebSocket-Protocol"), extracted_token)];
                  Ok(Some(extra_headers))
              },
              None => {
