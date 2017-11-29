@@ -8,20 +8,20 @@ keywords = ["websocket", "kafka", "proxy"]
 license = "BSD-3-Clause"
 
 [dependencies]
-structopt = "0.1.0"
-structopt-derive = "0.1.0"
-json = "0.11.9"
 config = "0.7.0"
-tokio-tungstenite = "0.4.0"
-futures = "0.1.16"
-tungstenite = "0.5.0"
-tokio-core = "0.1.10"
-uuid = { version = "0.5", features = ["v4"] }
-redis-async = "0.0.6"
+futures = "0.1.17"
+json = "0.11.12"
 jsonwebtoken = "3"
+redis-async = "0.0.6"
 serde = "1"
 serde_derive = "1"
+structopt = "0.1"
+structopt-derive = "0.1"
+tokio-core = "0.1.10"
+tokio-tungstenite = "0.4.0"
+tungstenite = "0.5.0"
+uuid = { version = "0.5", features = ["v4"] }
 
 [dependencies.rdkafka]
-version = "0.12.0"
+version = "0.14.0"
 features = ["ssl", "sasl"]
