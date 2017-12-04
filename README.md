@@ -19,8 +19,6 @@ OPTIONS:
     -p, --port <port>                        The listened port [default: 8080]
     -r, --redis-ip <redis_ip>                The used IP by Redis [default: 127.0.0.1]
     -y, --redis-password <redis_password>    Password for connecting to a redis [default: ""]
-    -t, --redis-port <redis_port>            The listened port by Redis [default: 6376]
-    -u, --redis-username <redis_username>    Username for connecting to a redis [default: ""]
     -C, --cert <ssl_certificate>             Path to a SSL certificate [default: ""]
     -K, --key <ssl_public_key>               Path to a SSL public key [default: ""]
 ```

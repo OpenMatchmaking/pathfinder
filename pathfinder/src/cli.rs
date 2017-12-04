@@ -60,18 +60,6 @@ pub struct CliOptions {
                 default_value = "6376")]
     pub redis_port: i32,
 
-    #[structopt(short = "u",
-                long = "redis-username",
-                help = "Username for connecting to redis",
-                default_value = "")]
-    pub redis_username: String,
-
-    #[structopt(short = "y",
-                long = "redis-password",
-                help = "Password for connecting to redis",
-                default_value = "")]
-    pub redis_password: String,
-
     #[structopt(short = "k",
                 long = "jwt-secret",
                 help = "Secret key for a JWT validation",
