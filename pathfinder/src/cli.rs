@@ -22,7 +22,7 @@ pub struct CliOptions {
                 long = "port",
                 help = "The listened port",
                 default_value = "8080")]
-    pub port: i32,
+    pub port: u16,
 
     #[structopt(short = "C",
                 long = "cert",
@@ -46,7 +46,7 @@ pub struct CliOptions {
                 long = "kafka-port",
                 help = "The listened port by Kafka broker",
                 default_value = "9092")]
-    pub kafka_port: i32,
+    pub kafka_port: u16,
 
     #[structopt(short = "r",
                 long = "redis-ip",
@@ -58,7 +58,13 @@ pub struct CliOptions {
                 long = "redis-port",
                 help = "The listened port by Redis",
                 default_value = "6376")]
-    pub redis_port: i32,
+    pub redis_port: u16,
+
+    #[structopt(short = "y",
+                long = "redis-password",
+                help = "Password for connecting to redis",
+                default_value = "")]
+    pub redis_password: String,
 
     #[structopt(short = "k",
                 long = "jwt-secret",

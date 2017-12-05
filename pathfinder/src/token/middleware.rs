@@ -6,22 +6,35 @@ use super::super::error::{Result, PathfinderError};
 use super::super::middleware::{Middleware};
 
 use cli::{CliOptions};
+use futures::{Future};
 use jsonwebtoken::{Validation, Algorithm};
 use tokio_core::reactor::{Handle};
 use tungstenite::handshake::server::{Request};
+use redis_async::client::{paired_connect, PairedConnection};
+use redis_async::error::{Error as RedisError};
+
+
+type PairedConnectionBox = Box<Future<Item=PairedConnection, Error=RedisError>>;
 
 
 /// A middleware class, that will check a specified token in WebSocket
 /// headers. Otherwise returns an error, if it isn't specified or invalid.
 pub struct JwtTokenMiddleware {
-    jwt_secret: String
+    jwt_secret: String,
+    redis_address: String,
+    redis_password: Option<String>
 }
 
 
 impl JwtTokenMiddleware {
     pub fn new(cli: &CliOptions) -> JwtTokenMiddleware {
         JwtTokenMiddleware {
-            jwt_secret: cli.jwt_secret_key.clone()
+            jwt_secret: cli.jwt_secret_key.clone(),
+            redis_address: format!("{}:{}", cli.redis_ip, cli.redis_port),
+            redis_password: match cli.redis_password.as_ref() {
+                password => Some(String::from(password)),
+                "" => None
+            }
         }
     }
 
@@ -50,7 +63,10 @@ impl JwtTokenMiddleware {
         validation
     }
 
-    fn get_user_id(&self, _handle: &Handle) -> Result<String> {
+    fn get_user_id(&self, handle: &Handle) -> Result<String> {
+        let redis_socket_address = self.redis_address.parse().unwrap();
+        let redis_connection = paired_connect(&redis_socket_address, handle);
+
         Ok(String::from("test"))
 //        Err(_) => {
 //            let message = String::from("Token is expired or doesn't exist.");

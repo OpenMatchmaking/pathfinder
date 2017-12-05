@@ -5,6 +5,7 @@ extern crate jsonwebtoken;
 extern crate tokio_core;
 extern crate tokio_tungstenite;
 extern crate tungstenite;
+extern crate redis_async;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
