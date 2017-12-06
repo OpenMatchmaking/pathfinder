@@ -7,10 +7,13 @@ use tokio_core::reactor::{Handle};
 use tungstenite::handshake::server::{Request};
 
 
+pub type WebSocketHeaders = Option<Vec<(String, String)>>;
+
+
 pub trait Middleware {
     /// Applied transforms and checks to an incoming request. If it failed,
     /// then should return an PathfinderError instance.
-    fn process_request(&self, request: &Request, handle: &Handle) -> Result<Option<Vec<(String, String)>>>;
+    fn process_request(&self, request: &Request, handle: &Handle) -> Result<WebSocketHeaders>;
 }
 
 
@@ -27,7 +30,7 @@ impl EmptyMiddleware {
 
 
 impl Middleware for EmptyMiddleware {
-    fn process_request(&self, _request: &Request, _handle: &Handle) -> Result<Option<Vec<(String, String)>>> {
+    fn process_request(&self, _request: &Request, _handle: &Handle) -> Result<WebSocketHeaders> {
         Ok(None)
     }
 }

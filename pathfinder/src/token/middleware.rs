@@ -3,10 +3,11 @@ use std::vec::{Vec};
 
 use super::jwt::{DEFAULT_ISSUER, validate as validate_token};
 use super::super::error::{Result, PathfinderError};
-use super::super::middleware::{Middleware};
+use super::super::middleware::{Middleware, WebSocketHeaders};
 
 use cli::{CliOptions};
 use futures::{Future};
+use futures::sync::{oneshot};
 use jsonwebtoken::{Validation, Algorithm};
 use tokio_core::reactor::{Handle};
 use tungstenite::handshake::server::{Request};
@@ -22,19 +23,21 @@ type PairedConnectionBox = Box<Future<Item=PairedConnection, Error=RedisError>>;
 pub struct JwtTokenMiddleware {
     jwt_secret: String,
     redis_address: String,
-    redis_password: Option<String>
+    redis_password: Option<String>,
 }
 
 
 impl JwtTokenMiddleware {
     pub fn new(cli: &CliOptions) -> JwtTokenMiddleware {
+        let mut redis_password = None;
+        if cli.redis_password != "" {
+            redis_password = Some(cli.redis_password.clone())
+        }
+
         JwtTokenMiddleware {
             jwt_secret: cli.jwt_secret_key.clone(),
             redis_address: format!("{}:{}", cli.redis_ip, cli.redis_port),
-            redis_password: match cli.redis_password.as_ref() {
-                password => Some(String::from(password)),
-                "" => None
-            }
+            redis_password: redis_password
         }
     }
 
@@ -63,28 +66,43 @@ impl JwtTokenMiddleware {
         validation
     }
 
-    fn get_user_id(&self, handle: &Handle) -> Result<String> {
+    fn get_user_id(&self, raw_token: String, handle: &Handle) -> Result<String> {
         let redis_socket_address = self.redis_address.parse().unwrap();
         let redis_connection = paired_connect(&redis_socket_address, handle);
 
-        Ok(String::from("test"))
-//        Err(_) => {
-//            let message = String::from("Token is expired or doesn't exist.");
-//            Err(PathfinderError::AuthenticationError(message))
-//        }
+        // Make the authentication before, if a password was specified.
+        let get_user_id_future = redis_connection.and_then(move |connection| {
+            // Check credentials
+            // Get the User ID from Redis by the token
+            connection.send::<String>(resp_array!["GET", raw_token])
+        });
+
+        let mut processing_result;
+        handle.spawn(get_user_id_future.then(move |response| {
+            processing_result = match response {
+                Ok(user_id) => Ok(String::from(user_id)),
+                Err(_) => {
+                    let message = String::from("Token is expired or doesn't exist.");
+                    Err(PathfinderError::AuthenticationError(message))
+                }
+            };
+            Ok(())
+        }));
+
+        processing_result
     }
 }
 
 
 impl Middleware for JwtTokenMiddleware {
-    fn process_request(&self, request: &Request, handle: &Handle) -> Result<Option<Vec<(String, String)>>> {
+    fn process_request(&self, request: &Request, handle: &Handle) -> Result<WebSocketHeaders> {
         match request.headers.find_first("Sec-WebSocket-Protocol") {
              Some(raw_token) => {
                  // Try to fetch token after handshake
                  let extracted_token = self.extract_token_from_header(raw_token)?;
 
                  // Validate the passed token with request
-                 let user_id = self.get_user_id(handle)?;
+                 let user_id = self.get_user_id(extracted_token.clone(), handle)?;
                  let validation_struct = self.get_validation_struct(&user_id);
                  let _token = validate_token(&extracted_token, &self.jwt_secret, &validation_struct)?;
 
