@@ -1,4 +1,3 @@
-use std::borrow::{Cow};
 use std::cell::{RefCell};
 use std::collections::{HashMap};
 use std::error::{Error};
@@ -7,8 +6,8 @@ use std::rc::{Rc};
 
 use super::engine::{Engine};
 use super::router::{Router};
-use super::middleware::{Middleware, EmptyMiddleware};
-use super::token::middleware::{JwtTokenMiddleware};
+use super::middleware::{Headers, Middleware, EmptyMiddleware};
+// use super::token::middleware::{JwtTokenMiddleware};
 
 use cli::{CliOptions};
 use futures::sync::{mpsc};
@@ -17,7 +16,6 @@ use futures::stream::{Stream};
 use tokio_core::net::{TcpListener};
 use tokio_core::reactor::{Core};
 use tokio_tungstenite::{accept_hdr_async};
-use tungstenite::error::{Error as TungsteniteError};
 use tungstenite::handshake::server::{Request};
 use tungstenite::protocol::{Message};
 
@@ -31,10 +29,11 @@ pub struct Proxy {
 
 impl Proxy {
     pub fn new(router: Box<Router>, cli: &CliOptions) -> Proxy {
-        let auth_middleware: Box<Middleware> = match cli.validate {
-            true => Box::new(JwtTokenMiddleware::new(cli)),
-               _ => Box::new(EmptyMiddleware::new(cli))
-        };
+//        let auth_middleware: Box<Middleware> = match cli.validate {
+//            true => Box::new(JwtTokenMiddleware::new(cli)),
+//               _ => Box::new(EmptyMiddleware::new(cli))
+//        };
+        let auth_middleware: Box<Middleware> = Box::new(EmptyMiddleware::new(cli));
 
         Proxy {
             engine: Rc::new(RefCell::new(Engine::new(router))),
@@ -52,24 +51,18 @@ impl Proxy {
         let server = socket.incoming().for_each(|(stream, addr)| {
             let engine_inner = self.engine.clone();
             let connections_inner = self.connections.clone();
+            let auth_middleware_inner = self.auth_middleware.clone();
             let handle_inner = handle.clone();
 
-            let auth_middleware_callback = |request: &Request| {
-                let handle_inner = handle.clone();
-                let auth_middleware_inner = self.auth_middleware.clone();
-                let processing_result = auth_middleware_inner.borrow().process_request(request, &handle_inner);
-
-                match processing_result {
-                    Ok(headers) => Ok(headers),
-                    Err(err) => {
-                        let formatted_error = format!("{}", err);
-                        let message = Cow::from(formatted_error);
-                        Err(TungsteniteError::Protocol(message))
-                    }
+            let mut headers: Headers = HashMap::new();
+            let copy_headers_callback = |request: &Request| {
+                for &(ref name, ref value) in request.headers.iter() {
+                    headers.insert(name.to_string(), value.clone());
                 }
+                Ok(None)
             };
 
-            accept_hdr_async(stream, auth_middleware_callback)
+            accept_hdr_async(stream, copy_headers_callback)
                 // Process the messages
                 .and_then(move |ws_stream| {
                     // Create a channel for the stream, which other sockets will use to
@@ -81,6 +74,8 @@ impl Proxy {
                     // Split the WebSocket stream so that it will be possible to work
                     // with the reading and writing halves separately.
                     let (sink, stream) = ws_stream.split();
+
+                    let auth_future = auth_middleware_inner.borrow().process_request(&headers, &handle_inner);
 
                     // Read and process each message
                     let connections = connections_inner.clone();

@@ -1,19 +1,24 @@
-use std::vec::{Vec};
+use std::collections::{HashMap};
 
-use super::error::{Result};
+use super::error::{PathfinderError};
 
 use cli::{CliOptions};
+use futures::{Future};
+use futures::future::{lazy};
+use futures::sync::{mpsc};
 use tokio_core::reactor::{Handle};
-use tungstenite::handshake::server::{Request};
+use tungstenite::protocol::{Message};
 
 
-pub type WebSocketHeaders = Option<Vec<(String, String)>>;
+pub type Headers = HashMap<String, Box<[u8]>>;
+pub type TungsteniteSender = mpsc::UnboundedSender<Message>;
+pub type MiddlewareFuture = Box<Future<Item=(), Error=PathfinderError> + 'static>;
 
 
 pub trait Middleware {
     /// Applied transforms and checks to an incoming request. If it failed,
     /// then should return an PathfinderError instance.
-    fn process_request(&self, request: &Request, handle: &Handle) -> Result<WebSocketHeaders>;
+    fn process_request(&self, headers: &Headers, handle: &Handle) -> MiddlewareFuture;
 }
 
 
@@ -30,7 +35,7 @@ impl EmptyMiddleware {
 
 
 impl Middleware for EmptyMiddleware {
-    fn process_request(&self, _request: &Request, _handle: &Handle) -> Result<WebSocketHeaders> {
-        Ok(None)
+    fn process_request(&self, _headers: &Headers, _handle: &Handle) -> MiddlewareFuture {
+        Box::new( lazy(move || { Ok(()) }) )
     }
 }

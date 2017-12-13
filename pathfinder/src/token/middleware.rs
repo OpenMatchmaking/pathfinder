@@ -1,21 +1,15 @@
 use std::str;
-use std::vec::{Vec};
 
-use super::jwt::{DEFAULT_ISSUER, validate as validate_token};
+use super::jwt::{DEFAULT_ISSUER}; //validate as validate_token};
 use super::super::error::{Result, PathfinderError};
-use super::super::middleware::{Middleware, WebSocketHeaders};
+use super::super::middleware::{Headers, Middleware, MiddlewareFuture};
 
 use cli::{CliOptions};
 use futures::{Future};
-use futures::sync::{oneshot};
+use futures::future::lazy;
 use jsonwebtoken::{Validation, Algorithm};
 use tokio_core::reactor::{Handle};
-use tungstenite::handshake::server::{Request};
-use redis_async::client::{paired_connect, PairedConnection};
-use redis_async::error::{Error as RedisError};
-
-
-type PairedConnectionBox = Box<Future<Item=PairedConnection, Error=RedisError>>;
+use redis_async::client::{paired_connect};
 
 
 /// A middleware class, that will check a specified token in WebSocket
@@ -71,49 +65,38 @@ impl JwtTokenMiddleware {
         let redis_connection = paired_connect(&redis_socket_address, handle);
 
         // Make the authentication before, if a password was specified.
-        let get_user_id_future = redis_connection.and_then(move |connection| {
+        let _get_user_id_future = redis_connection.and_then(move |connection| {
             // Check credentials
             // Get the User ID from Redis by the token
             connection.send::<String>(resp_array!["GET", raw_token])
         });
 
-        let mut processing_result;
-        handle.spawn(get_user_id_future.then(move |response| {
-            processing_result = match response {
-                Ok(user_id) => Ok(String::from(user_id)),
-                Err(_) => {
-                    let message = String::from("Token is expired or doesn't exist.");
-                    Err(PathfinderError::AuthenticationError(message))
-                }
-            };
-            Ok(())
-        }));
-
-        processing_result
+        Ok(String::from("test_user"))
     }
 }
 
 
 impl Middleware for JwtTokenMiddleware {
-    fn process_request(&self, request: &Request, handle: &Handle) -> Result<WebSocketHeaders> {
-        match request.headers.find_first("Sec-WebSocket-Protocol") {
-             Some(raw_token) => {
-                 // Try to fetch token after handshake
-                 let extracted_token = self.extract_token_from_header(raw_token)?;
-
-                 // Validate the passed token with request
-                 let user_id = self.get_user_id(extracted_token.clone(), handle)?;
-                 let validation_struct = self.get_validation_struct(&user_id);
-                 let _token = validate_token(&extracted_token, &self.jwt_secret, &validation_struct)?;
-
-                 // Return validated header as is
-                 let extra_headers = vec![(String::from("Sec-WebSocket-Protocol"), extracted_token)];
-                 Ok(Some(extra_headers))
-             },
-             None => {
-                 let message = String::from("Token was not specified.");
-                 Err(PathfinderError::AuthenticationError(message))
-             }
-        }
+    fn process_request(&self, _request: &Headers, _handle: &Handle) -> MiddlewareFuture {
+//        match request.headers.find_first("Sec-WebSocket-Protocol") {
+//             Some(raw_token) => {
+//                 // Try to fetch token after handshake
+//                 let extracted_token = self.extract_token_from_header(raw_token)?;
+//
+//                 // Validate the passed token with request
+//                 let user_id = self.get_user_id(extracted_token.clone(), handle)?;
+//                 let validation_struct = self.get_validation_struct(&user_id);
+//                 let _token = validate_token(&extracted_token, &self.jwt_secret, &validation_struct)?;
+//
+//                 // Return validated header as is
+//                 let extra_headers = vec![(String::from("Sec-WebSocket-Protocol"), extracted_token)];
+//                 Ok(Some(extra_headers))
+//             },
+//             None => {
+//                 let message = String::from("Token was not specified.");
+//                 Err(PathfinderError::AuthenticationError(message))
+//             }
+//        }
+        Box::new( lazy(move || { Ok(()) }) )
     }
 }

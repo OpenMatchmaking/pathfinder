@@ -57,7 +57,7 @@ pub struct CliOptions {
     #[structopt(short = "t",
                 long = "redis-port",
                 help = "The listened port by Redis",
-                default_value = "6376")]
+                default_value = "6379")]
     pub redis_port: u16,
 
     #[structopt(short = "y",
