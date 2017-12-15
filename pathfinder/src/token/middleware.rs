@@ -1,8 +1,8 @@
 use std::str;
 
-use super::jwt::{DEFAULT_ISSUER}; //validate as validate_token};
+use super::jwt::{DEFAULT_ISSUER, validate};
 use super::super::error::{Result, PathfinderError};
-use super::super::middleware::{Headers, Middleware, MiddlewareFuture};
+use super::super::middleware::{JsonMessage, Middleware, MiddlewareFuture};
 
 use cli::{CliOptions};
 use futures::{Future};
@@ -60,43 +60,55 @@ impl JwtTokenMiddleware {
         validation
     }
 
-    fn get_user_id(&self, raw_token: String, handle: &Handle) -> Result<String> {
-        let redis_socket_address = self.redis_address.parse().unwrap();
-        let redis_connection = paired_connect(&redis_socket_address, handle);
-
-        // Make the authentication before, if a password was specified.
-        let _get_user_id_future = redis_connection.and_then(move |connection| {
-            // Check credentials
-            // Get the User ID from Redis by the token
-            connection.send::<String>(resp_array!["GET", raw_token])
-        });
-
-        Ok(String::from("test_user"))
-    }
+//    fn get_user_id(&self, raw_token: &str, handle: &Handle) -> Box<Future<Item=PairedConnection, Error=RedisError> + 'static> {
+//        let redis_socket_address = self.redis_address.parse().unwrap();
+//        let redis_connection = paired_connect(&redis_socket_address, handle);
+//
+//        // TODO: Add AUTH query if a password was specified.
+//        redis_connection
+//            // Get the User ID from Redis by the token
+//            .and_then(move |connection| {
+//                connection.send::<String>(resp_array!["GET", String::from(raw_token)])
+//            })
+//    }
 }
 
 
 impl Middleware for JwtTokenMiddleware {
-    fn process_request(&self, _request: &Headers, _handle: &Handle) -> MiddlewareFuture {
-//        match request.headers.find_first("Sec-WebSocket-Protocol") {
-//             Some(raw_token) => {
-//                 // Try to fetch token after handshake
-//                 let extracted_token = self.extract_token_from_header(raw_token)?;
-//
-//                 // Validate the passed token with request
-//                 let user_id = self.get_user_id(extracted_token.clone(), handle)?;
-//                 let validation_struct = self.get_validation_struct(&user_id);
-//                 let _token = validate_token(&extracted_token, &self.jwt_secret, &validation_struct)?;
-//
-//                 // Return validated header as is
-//                 let extra_headers = vec![(String::from("Sec-WebSocket-Protocol"), extracted_token)];
-//                 Ok(Some(extra_headers))
-//             },
-//             None => {
-//                 let message = String::from("Token was not specified.");
-//                 Err(PathfinderError::AuthenticationError(message))
-//             }
-//        }
-        Box::new( lazy(move || { Ok(()) }) )
+    fn process_request(&self, message: &JsonMessage, handle: &Handle) -> MiddlewareFuture {
+        let token = match message["token"].as_str() {
+            Some(token) => String::from(token),
+            None => {
+                return Box::new(lazy(move || {
+                    let message = String::from("Token was not specified.");
+                    Err(PathfinderError::AuthenticationError(message))
+                }))
+            }
+        };
+
+        let redis_socket_address = self.redis_address.parse().unwrap();
+        let redis_connection = paired_connect(&redis_socket_address, handle);
+        Box::new(
+            redis_connection
+                // Get the User ID from Redis by the token
+                .and_then(move |connection| {
+                    connection.send::<String>(resp_array!["GET", token])
+                })
+                // Connection issue or token is already deleted
+                .map_err(|err| {
+                    let message = String::from("Token is expired.");
+                    PathfinderError::AuthenticationError(message)
+                })
+                // Extracted user_id used here for additional JWT validation
+                .map(|user_id| {
+                    let validation_struct = self.get_validation_struct(&user_id);
+                    validate(&token, &self.jwt_secret, &validation_struct)
+                })
+                .map_err(|_| {
+                    let message = String::from("Token is invalid.");
+                    PathfinderError::AuthenticationError(message)
+                })
+                .map(|_| ())
+        )
     }
 }

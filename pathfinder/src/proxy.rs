@@ -6,8 +6,8 @@ use std::rc::{Rc};
 
 use super::engine::{Engine};
 use super::router::{Router};
-use super::middleware::{Headers, Middleware, EmptyMiddleware};
-// use super::token::middleware::{JwtTokenMiddleware};
+use super::middleware::{Middleware, EmptyMiddleware};
+use super::token::middleware::{JwtTokenMiddleware};
 
 use cli::{CliOptions};
 use futures::sync::{mpsc};
@@ -15,8 +15,7 @@ use futures::{Future, Sink};
 use futures::stream::{Stream};
 use tokio_core::net::{TcpListener};
 use tokio_core::reactor::{Core};
-use tokio_tungstenite::{accept_hdr_async};
-use tungstenite::handshake::server::{Request};
+use tokio_tungstenite::{accept_async};
 use tungstenite::protocol::{Message};
 
 
@@ -29,11 +28,10 @@ pub struct Proxy {
 
 impl Proxy {
     pub fn new(router: Box<Router>, cli: &CliOptions) -> Proxy {
-//        let auth_middleware: Box<Middleware> = match cli.validate {
-//            true => Box::new(JwtTokenMiddleware::new(cli)),
-//               _ => Box::new(EmptyMiddleware::new(cli))
-//        };
-        let auth_middleware: Box<Middleware> = Box::new(EmptyMiddleware::new(cli));
+        let auth_middleware: Box<Middleware> = match cli.validate {
+            true => Box::new(JwtTokenMiddleware::new(cli)),
+               _ => Box::new(EmptyMiddleware::new(cli))
+        };
 
         Proxy {
             engine: Rc::new(RefCell::new(Engine::new(router))),
@@ -49,38 +47,59 @@ impl Proxy {
         println!("Listening on: {}", address);
 
         let server = socket.incoming().for_each(|(stream, addr)| {
-            let engine_inner = self.engine.clone();
-            let connections_inner = self.connections.clone();
-            let auth_middleware_inner = self.auth_middleware.clone();
-            let handle_inner = handle.clone();
+            let engine_local = self.engine.clone();
+            let connections_local = self.connections.clone();
+            let auth_middleware_local = self.auth_middleware.clone();
+            let handle_local = handle.clone();
 
-            let mut headers: Headers = HashMap::new();
-            let copy_headers_callback = |request: &Request| {
-                for &(ref name, ref value) in request.headers.iter() {
-                    headers.insert(name.to_string(), value.clone());
-                }
-                Ok(None)
-            };
-
-            accept_hdr_async(stream, copy_headers_callback)
+            accept_async(stream)
                 // Process the messages
                 .and_then(move |ws_stream| {
                     // Create a channel for the stream, which other sockets will use to
                     // send us messages. It could be used for broadcasting your data to
                     // another users in the future.
                     let (tx, rx) = mpsc::unbounded();
-                    connections_inner.borrow_mut().insert(addr, tx);
+                    connections_local.borrow_mut().insert(addr, tx);
 
                     // Split the WebSocket stream so that it will be possible to work
                     // with the reading and writing halves separately.
                     let (sink, stream) = ws_stream.split();
 
-                    let auth_future = auth_middleware_inner.borrow().process_request(&headers, &handle_inner);
-
                     // Read and process each message
-                    let connections = connections_inner.clone();
+                    let handle_inner = handle_local.clone();
+                    let connections_inner = connections_local.clone();
                     let ws_reader = stream.for_each(move |message: Message| {
-                        engine_inner.borrow().handle(&message, &addr, &connections);
+
+                        // Get references to required components
+                        let engine_nested = engine_local.clone();
+                        let connections_nested = connections_inner.clone();
+
+                        // 1. Deserialize message into JSON
+                        let json_message = match engine_local.borrow().deserialize_message(&message) {
+                            Ok(json_message) => json_message,
+                            Err(err) => {
+                                let tx_nested = &connections_inner.borrow_mut()[&addr];
+                                let formatted_error = format!("{}", err);
+                                let error_message = engine_local.borrow().wrap_an_error(formatted_error.as_str());
+                                tx_nested.unbounded_send(error_message).unwrap();
+                                return Ok(())
+                            }
+                        };
+
+                        // 2. Apply a middleware to each incoming message
+                        let auth_future = auth_middleware_local.borrow()
+                            .process_request(&json_message, &handle_inner)
+                            .then(move |result| {
+                                if result.is_err() {
+                                    let tx_nested = &connections_nested.borrow_mut()[&addr];
+                                    let formatted_error = format!("{}", result.unwrap_err());
+                                    let error_message = engine_nested.borrow().wrap_an_error(formatted_error.as_str());
+                                    tx_nested.unbounded_send(error_message).unwrap();
+                                };
+                                Ok(())
+                            });
+
+                        handle_inner.spawn(auth_future);
                         Ok(())
                     });
 
@@ -95,8 +114,8 @@ impl Proxy {
                                               .select(ws_writer.map(|_| ()).map_err(|_| ()));
 
                     // Close the connection after using
-                    handle_inner.spawn(connection.then(move |_| {
-                        connections_inner.borrow_mut().remove(&addr);
+                    handle_local.spawn(connection.then(move |_| {
+                        connections_local.borrow_mut().remove(&addr);
                         println!("Connection {} closed.", addr);
                         Ok(())
                     }));
