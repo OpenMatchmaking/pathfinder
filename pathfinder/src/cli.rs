@@ -74,6 +74,6 @@ pub struct CliOptions {
 
     #[structopt(short = "v",
                 long = "validate",
-                help = "Validate WebSocket header with token")]
+                help = "Validate a token that was specified with data")]
     pub validate: bool,
 }
