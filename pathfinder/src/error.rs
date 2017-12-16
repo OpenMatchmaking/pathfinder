@@ -7,6 +7,8 @@ use std::result;
 
 use self::config::{ConfigError};
 
+use jsonwebtoken as jwt;
+
 
 /// Helper alias for `Result` objects that return a Pathfinder error.
 pub type Result<T> = result::Result<T, PathfinderError>;
@@ -28,6 +30,8 @@ pub enum PathfinderError {
     /// Occurs during processing an incoming message (e.g. parsing,
     /// converting into JSON)
     DecodingError(String),
+    /// The error that occurred when token isn't specified or invalid.
+    AuthenticationError(String)
 }
 
 
@@ -36,9 +40,10 @@ impl fmt::Display for PathfinderError {
         match *self {
             PathfinderError::Io(ref err) => write!(f, "IO error: {}", err),
             PathfinderError::SettingsError(ref err) => write!(f, "Settings error: {}", err),
-            PathfinderError::InvalidEndpoint(ref s) => write!(f, "Parse error: {}", s),
-            PathfinderError::EndpointNotFound(ref s) => write!(f, "Endpoint \"{}\" was not found", s),
-            PathfinderError::DecodingError(ref s) => write!(f, "Decoding error: {}", s),
+            PathfinderError::InvalidEndpoint(ref msg) => write!(f, "Parse error: {}", msg),
+            PathfinderError::EndpointNotFound(ref msg) => write!(f, "Endpoint \"{}\" was not found", msg),
+            PathfinderError::DecodingError(ref msg) => write!(f, "Decoding error: {}", msg),
+            PathfinderError::AuthenticationError(ref msg) => write!(f, "Authentication error: {}", msg),
         }
     }
 }
@@ -73,5 +78,12 @@ impl From<io::Error> for PathfinderError {
 impl From<config::ConfigError> for PathfinderError {
     fn from(err: config::ConfigError) -> PathfinderError {
         PathfinderError::SettingsError(err)
+    }
+}
+
+
+impl From<jwt::errors::Error> for PathfinderError {
+    fn from(err: jwt::errors::Error) -> PathfinderError {
+        PathfinderError::AuthenticationError(String::from(err.description()))
     }
 }

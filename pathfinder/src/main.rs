@@ -1,9 +1,15 @@
 extern crate futures;
 #[macro_use]
 extern crate json;
+extern crate jsonwebtoken;
 extern crate tokio_core;
 extern crate tokio_tungstenite;
 extern crate tungstenite;
+#[macro_use]
+extern crate redis_async;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
 extern crate structopt;
 #[macro_use]
 extern crate structopt_derive;
@@ -14,6 +20,8 @@ mod config;
 mod endpoint;
 mod engine;
 mod error;
+mod middleware;
+mod token;
 mod proxy;
 mod router;
 mod serializer;
@@ -32,7 +40,7 @@ fn main() {
     let endpoints = extract_endpoints(config);
     let router = Box::new(Router::new(endpoints));
 
-    let proxy = Box::new(Proxy::new(router));
+    let proxy = Box::new(Proxy::new(router, &cli));
     let address = format!("{}:{}", cli.ip, cli.port).parse().unwrap();
     proxy.run(address);
 }

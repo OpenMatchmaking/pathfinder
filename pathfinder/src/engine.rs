@@ -46,18 +46,18 @@ impl Engine {
         transmitter.unbounded_send(response).unwrap();
     }
 
-    fn wrap_an_error(&self, err: &str) -> Message {
+    pub fn wrap_an_error(&self, err: &str) -> Message {
         let json_error_message = object!("details" => err);
         let serializer = Serializer::new();
         serializer.serialize(json_error_message.dump()).unwrap()
     }
 
-    fn serialize_message(&self, json: Box<JsonValue>) -> Message {
+    pub fn serialize_message(&self, json: Box<JsonValue>) -> Message {
         let serializer = Serializer::new();
         serializer.serialize(json.dump()).unwrap()
     }
 
-    fn deserialize_message(&self, message: &Message) -> Result<Box<JsonValue>> {
+    pub fn deserialize_message(&self, message: &Message) -> Result<Box<JsonValue>> {
         let serializer = Serializer::new();
         serializer.deserialize(message)
     }

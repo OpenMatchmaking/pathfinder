@@ -1,11 +1,15 @@
 use std::cell::{RefCell};
 use std::collections::{HashMap};
+use std::error::{Error};
 use std::net::{SocketAddr};
 use std::rc::{Rc};
 
 use super::engine::{Engine};
 use super::router::{Router};
+use super::middleware::{Middleware, EmptyMiddleware};
+use super::token::middleware::{JwtTokenMiddleware};
 
+use cli::{CliOptions};
 use futures::sync::{mpsc};
 use futures::{Future, Sink};
 use futures::stream::{Stream};
@@ -17,15 +21,22 @@ use tungstenite::protocol::{Message};
 
 pub struct Proxy {
     engine: Rc<RefCell<Engine>>,
-    connections: Rc<RefCell<HashMap<SocketAddr, mpsc::UnboundedSender<Message>>>>
+    connections: Rc<RefCell<HashMap<SocketAddr, mpsc::UnboundedSender<Message>>>>,
+    auth_middleware: Rc<RefCell<Box<Middleware>>>,
 }
 
 
 impl Proxy {
-    pub fn new(router: Box<Router>) -> Proxy {
+    pub fn new(router: Box<Router>, cli: &CliOptions) -> Proxy {
+        let auth_middleware: Box<Middleware> = match cli.validate {
+            true => Box::new(JwtTokenMiddleware::new(cli)),
+               _ => Box::new(EmptyMiddleware::new(cli))
+        };
+
         Proxy {
             engine: Rc::new(RefCell::new(Engine::new(router))),
-            connections: Rc::new(RefCell::new(HashMap::new()))
+            connections: Rc::new(RefCell::new(HashMap::new())),
+            auth_middleware: Rc::new(RefCell::new(auth_middleware)),
         }
     }
 
@@ -36,32 +47,59 @@ impl Proxy {
         println!("Listening on: {}", address);
 
         let server = socket.incoming().for_each(|(stream, addr)| {
-            let engine_inner = self.engine.clone();
-            let connections_inner = self.connections.clone();
-            let handle_inner = handle.clone();
+            let engine_local = self.engine.clone();
+            let connections_local = self.connections.clone();
+            let auth_middleware_local = self.auth_middleware.clone();
+            let handle_local = handle.clone();
 
             accept_async(stream)
-                // Check the Auth header
-                .and_then(move |ws_stream| {
-                    println!("Checking the user's token");
-                    Ok(ws_stream)
-                })
                 // Process the messages
                 .and_then(move |ws_stream| {
                     // Create a channel for the stream, which other sockets will use to
                     // send us messages. It could be used for broadcasting your data to
                     // another users in the future.
                     let (tx, rx) = mpsc::unbounded();
-                    connections_inner.borrow_mut().insert(addr, tx);
+                    connections_local.borrow_mut().insert(addr, tx);
 
                     // Split the WebSocket stream so that it will be possible to work
                     // with the reading and writing halves separately.
                     let (sink, stream) = ws_stream.split();
 
                     // Read and process each message
-                    let connections = connections_inner.clone();
+                    let handle_inner = handle_local.clone();
+                    let connections_inner = connections_local.clone();
                     let ws_reader = stream.for_each(move |message: Message| {
-                        engine_inner.borrow().handle(&message, &addr, &connections);
+
+                        // Get references to required components
+                        let engine_nested = engine_local.clone();
+                        let connections_nested = connections_inner.clone();
+
+                        // 1. Deserialize message into JSON
+                        let json_message = match engine_local.borrow().deserialize_message(&message) {
+                            Ok(json_message) => json_message,
+                            Err(err) => {
+                                let tx_nested = &connections_inner.borrow_mut()[&addr];
+                                let formatted_error = format!("{}", err);
+                                let error_message = engine_local.borrow().wrap_an_error(formatted_error.as_str());
+                                tx_nested.unbounded_send(error_message).unwrap();
+                                return Ok(())
+                            }
+                        };
+
+                        // 2. Apply a middleware to each incoming message
+                        let auth_future = auth_middleware_local.borrow()
+                            .process_request(&json_message, &handle_inner)
+                            .then(move |result| {
+                                if result.is_err() {
+                                    let tx_nested = &connections_nested.borrow_mut()[&addr];
+                                    let formatted_error = format!("{}", result.unwrap_err());
+                                    let error_message = engine_nested.borrow().wrap_an_error(formatted_error.as_str());
+                                    tx_nested.unbounded_send(error_message).unwrap();
+                                };
+                                Ok(())
+                            });
+
+                        handle_inner.spawn(auth_future);
                         Ok(())
                     });
 
@@ -76,15 +114,17 @@ impl Proxy {
                                               .select(ws_writer.map(|_| ()).map_err(|_| ()));
 
                     // Close the connection after using
-                    handle_inner.spawn(connection.then(move |_| {
-                        connections_inner.borrow_mut().remove(&addr);
+                    handle_local.spawn(connection.then(move |_| {
+                        connections_local.borrow_mut().remove(&addr);
                         println!("Connection {} closed.", addr);
                         Ok(())
                     }));
 
                     Ok(())
-                }).or_else(|err| {
-                    println!("An error occurred during the WebSocket handshake: {}", err);
+                })
+                // An error occurred during the WebSocket handshake
+                .or_else(|err| {
+                    println!("{}", err.description());
                     Ok(())
                 })
         });

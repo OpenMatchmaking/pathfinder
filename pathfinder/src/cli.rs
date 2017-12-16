@@ -4,7 +4,6 @@ extern crate structopt;
 #[derive(StructOpt, Debug)]
 #[structopt(name = "Pathfinder",
             version = "0.1.0",
-            author = "Valeryi Savich <relrin78@gmail.com>",
             about = "WebSocket-over-Kafka reverse proxy")]
 pub struct CliOptions {
     #[structopt(short = "c",
@@ -23,7 +22,7 @@ pub struct CliOptions {
                 long = "port",
                 help = "The listened port",
                 default_value = "8080")]
-    pub port: i32,
+    pub port: u16,
 
     #[structopt(short = "C",
                 long = "cert",
@@ -47,5 +46,34 @@ pub struct CliOptions {
                 long = "kafka-port",
                 help = "The listened port by Kafka broker",
                 default_value = "9092")]
-    pub kafka_port: i32,
+    pub kafka_port: u16,
+
+    #[structopt(short = "r",
+                long = "redis-ip",
+                help = "The used IP by Redis",
+                default_value = "127.0.0.1")]
+    pub redis_ip: String,
+
+    #[structopt(short = "t",
+                long = "redis-port",
+                help = "The listened port by Redis",
+                default_value = "6379")]
+    pub redis_port: u16,
+
+    #[structopt(short = "y",
+                long = "redis-password",
+                help = "Password for connecting to redis",
+                default_value = "")]
+    pub redis_password: String,
+
+    #[structopt(short = "k",
+                long = "jwt-secret",
+                help = "Secret key for a JWT validation",
+                default_value = "secret")]
+    pub jwt_secret_key: String,
+
+    #[structopt(short = "v",
+                long = "validate",
+                help = "Validate a token that was specified with data")]
+    pub validate: bool,
 }
