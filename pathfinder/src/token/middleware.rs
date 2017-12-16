@@ -73,7 +73,23 @@ impl Middleware for JwtTokenMiddleware {
         };
 
         let redis_socket_address = self.redis_address.parse().unwrap();
-        let redis_connection = paired_connect(&redis_socket_address, handle);
+        let redis_connection = match self.redis_password {
+            Some(ref password) => {
+                let password_inner = password.clone();
+                paired_connect(&redis_socket_address, handle)
+                    .and_then(|connection| {
+                        connection.send::<String>(resp_array!["AUTH", password_inner])
+                            .map(|_| connection)
+                    })
+                    .map_err(|_| {
+                        let message = String::from("A technical issue with Redis...");
+                        println!("{}", message);
+                        PathfinderError::AuthenticationError(message)
+                    })
+                    .map(|connection| connection)
+            },
+            _ => paired_connect(&redis_socket_address, handle)
+        };
 
         let token_inner = token.clone();
         let validation_struct = self.get_validation_struct();
@@ -100,7 +116,7 @@ impl Middleware for JwtTokenMiddleware {
                     let message = String::from("Token is invalid.");
                     PathfinderError::AuthenticationError(message)
                 })
-                // Drop the result, because everything the we need was done
+                // Drop the result, because everything that we need was done
                 .map(|_| { () })
         )
     }
