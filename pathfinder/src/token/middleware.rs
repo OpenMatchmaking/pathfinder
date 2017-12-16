@@ -45,8 +45,8 @@ impl JwtTokenMiddleware {
         }
     }
 
-    fn get_validation_struct(&self, user_id: &str) -> Validation {
-        let mut validation = Validation {
+    fn get_validation_struct(&self) -> Validation {
+        Validation {
             leeway: 0,
             validate_exp: true,
             validate_iat: true,
@@ -55,22 +55,8 @@ impl JwtTokenMiddleware {
             sub: None,
             aud: None,
             algorithms: Some(vec![Algorithm::HS512]),
-        };
-        validation.set_audience(&user_id);
-        validation
+        }
     }
-
-//    fn get_user_id(&self, raw_token: &str, handle: &Handle) -> Box<Future<Item=PairedConnection, Error=RedisError> + 'static> {
-//        let redis_socket_address = self.redis_address.parse().unwrap();
-//        let redis_connection = paired_connect(&redis_socket_address, handle);
-//
-//        // TODO: Add AUTH query if a password was specified.
-//        redis_connection
-//            // Get the User ID from Redis by the token
-//            .and_then(move |connection| {
-//                connection.send::<String>(resp_array!["GET", String::from(raw_token)])
-//            })
-//    }
 }
 
 
@@ -88,6 +74,10 @@ impl Middleware for JwtTokenMiddleware {
 
         let redis_socket_address = self.redis_address.parse().unwrap();
         let redis_connection = paired_connect(&redis_socket_address, handle);
+
+        let token_inner = token.clone();
+        let validation_struct = self.get_validation_struct();
+        let jwt_secret_inner = self.jwt_secret.clone();
         Box::new(
             redis_connection
                 // Get the User ID from Redis by the token
@@ -95,20 +85,23 @@ impl Middleware for JwtTokenMiddleware {
                     connection.send::<String>(resp_array!["GET", token])
                 })
                 // Connection issue or token is already deleted
-                .map_err(|err| {
+                .map_err(|_| {
                     let message = String::from("Token is expired.");
                     PathfinderError::AuthenticationError(message)
                 })
                 // Extracted user_id used here for additional JWT validation
-                .map(|user_id| {
-                    let validation_struct = self.get_validation_struct(&user_id);
-                    validate(&token, &self.jwt_secret, &validation_struct)
+                .map(move |user_id| {
+                    let mut validation_struct_inner = validation_struct.clone();
+                    validation_struct_inner.set_audience(&user_id);
+                    validate(&token_inner, &jwt_secret_inner, &validation_struct)
                 })
+                // The passed token is expired or has an invalid data
                 .map_err(|_| {
                     let message = String::from("Token is invalid.");
                     PathfinderError::AuthenticationError(message)
                 })
-                .map(|_| ())
+                // Drop the result, because everything the we need was done
+                .map(|_| { () })
         )
     }
 }
