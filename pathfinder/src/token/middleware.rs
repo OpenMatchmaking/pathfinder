@@ -10,6 +10,7 @@ use futures::future::lazy;
 use jsonwebtoken::{Validation, Algorithm};
 use tokio_core::reactor::{Handle};
 use redis_async::client::{paired_connect};
+use redis_async::error::{Error as RedisError};
 
 
 /// A middleware class, that will check a specified token in WebSocket
@@ -76,17 +77,19 @@ impl Middleware for JwtTokenMiddleware {
         let redis_connection = match self.redis_password {
             Some(ref password) => {
                 let password_inner = password.clone();
-                paired_connect(&redis_socket_address, handle)
-                    .and_then(|connection| {
-                        connection.send::<String>(resp_array!["AUTH", password_inner])
-                            .map(|_| connection)
-                    })
-                    .map_err(|_| {
-                        let message = String::from("A technical issue with Redis...");
-                        println!("{}", message);
-                        PathfinderError::AuthenticationError(message)
-                    })
-                    .map(|connection| connection)
+                Box::new(
+                    paired_connect(&redis_socket_address, handle)
+                        .and_then(|connection| {
+                            connection.send::<String>(resp_array!["AUTH", password_inner])
+                                .map(|_| connection)
+                        })
+                        .map_err(|_| {
+                            let message = String::from("An invalid password for Redis instance.");
+                            println!("{}", message);
+                            RedisError::Remote(message)
+                        })
+                        .map(|connection| connection)
+                )
             },
             _ => paired_connect(&redis_socket_address, handle)
         };
