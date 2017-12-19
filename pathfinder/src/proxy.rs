@@ -4,7 +4,7 @@ use std::error::{Error};
 use std::net::{SocketAddr};
 use std::rc::{Rc};
 
-use engine::{Engine, Router};
+use engine::{Engine};
 use auth::middleware::{Middleware, EmptyMiddleware};
 use auth::token::middleware::{JwtTokenMiddleware};
 
@@ -19,21 +19,21 @@ use tungstenite::protocol::{Message};
 
 
 pub struct Proxy {
-    engine: Rc<RefCell<Engine>>,
+    engine: Rc<RefCell<Box<Engine>>>,
     connections: Rc<RefCell<HashMap<SocketAddr, mpsc::UnboundedSender<Message>>>>,
     auth_middleware: Rc<RefCell<Box<Middleware>>>,
 }
 
 
 impl Proxy {
-    pub fn new(router: Box<Router>, cli: &CliOptions) -> Proxy {
+    pub fn new(engine: Box<Engine>, cli: &CliOptions) -> Proxy {
         let auth_middleware: Box<Middleware> = match cli.validate {
             true => Box::new(JwtTokenMiddleware::new(cli)),
                _ => Box::new(EmptyMiddleware::new(cli))
         };
 
         Proxy {
-            engine: Rc::new(RefCell::new(Engine::new(router))),
+            engine: Rc::new(RefCell::new(engine)),
             connections: Rc::new(RefCell::new(HashMap::new())),
             auth_middleware: Rc::new(RefCell::new(auth_middleware)),
         }
