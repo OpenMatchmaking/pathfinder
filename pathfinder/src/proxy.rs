@@ -77,10 +77,7 @@ impl Proxy {
                         let json_message = match engine_local.borrow().deserialize_message(&message) {
                             Ok(json_message) => json_message,
                             Err(err) => {
-                                let tx_nested = &connections_inner.borrow_mut()[&addr];
-                                let formatted_error = format!("{}", err);
-                                let error_message = engine_local.borrow().wrap_an_error(formatted_error.as_str());
-                                tx_nested.unbounded_send(error_message).unwrap();
+                                handle_error!(&connections_inner, &addr, engine_local, err);
                                 return Ok(())
                             }
                         };
@@ -90,10 +87,7 @@ impl Proxy {
                             .process_request(&json_message, &handle_inner)
                             .then(move |result| {
                                 if result.is_err() {
-                                    let tx_nested = &connections_nested.borrow_mut()[&addr];
-                                    let formatted_error = format!("{}", result.unwrap_err());
-                                    let error_message = engine_nested.borrow().wrap_an_error(formatted_error.as_str());
-                                    tx_nested.unbounded_send(error_message).unwrap();
+                                    handle_error!(&connections_nested, &addr, engine_nested, result.unwrap_err());
                                 };
                                 Ok(())
                             });

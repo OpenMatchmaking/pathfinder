@@ -1,3 +1,5 @@
+#[macro_use]
+pub mod engine_macro;
 pub mod router;
 pub mod serializer;
 

@@ -18,6 +18,7 @@ extern crate uuid;
 mod auth;
 mod cli;
 mod config;
+#[macro_use]
 mod engine;
 mod error;
 mod proxy;
