@@ -1,4 +1,4 @@
-use super::error::{PathfinderError};
+use super::super::error::{PathfinderError};
 
 use cli::{CliOptions};
 use futures::{Future};

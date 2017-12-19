@@ -6,8 +6,8 @@ use std::rc::{Rc};
 
 use super::engine::{Engine};
 use super::router::{Router};
-use super::middleware::{Middleware, EmptyMiddleware};
-use super::token::middleware::{JwtTokenMiddleware};
+use auth::middleware::{Middleware, EmptyMiddleware};
+use auth::token::middleware::{JwtTokenMiddleware};
 
 use cli::{CliOptions};
 use futures::sync::{mpsc};

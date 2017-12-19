@@ -1,4 +1,4 @@
-use super::super::error::{Result, PathfinderError};
+use super::super::super::error::{Result, PathfinderError};
 
 use jsonwebtoken::{decode, TokenData, Validation};
 

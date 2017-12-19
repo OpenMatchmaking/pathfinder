@@ -1,8 +1,9 @@
 use std::str;
 
-use super::jwt::{DEFAULT_ISSUER, validate};
-use super::super::error::{Result, PathfinderError};
-use super::super::middleware::{JsonMessage, Middleware, MiddlewareFuture};
+use super::super::super::error::{Result, PathfinderError};
+use auth::token::jwt::{DEFAULT_ISSUER, validate};
+use auth::middleware::{JsonMessage, Middleware, MiddlewareFuture};
+
 
 use cli::{CliOptions};
 use futures::{Future};

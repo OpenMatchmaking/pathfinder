@@ -15,13 +15,12 @@ extern crate structopt;
 extern crate structopt_derive;
 extern crate uuid;
 
+mod auth;
 mod cli;
 mod config;
 mod endpoint;
 mod engine;
 mod error;
-mod middleware;
-mod token;
 mod proxy;
 mod router;
 mod serializer;
