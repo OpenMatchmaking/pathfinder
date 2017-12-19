@@ -12,6 +12,7 @@ use cli::{CliOptions};
 use futures::sync::{mpsc};
 use futures::{Future, Sink};
 use futures::stream::{Stream};
+use json::{JsonValue};
 use tokio_core::net::{TcpListener};
 use tokio_core::reactor::{Core};
 use tokio_tungstenite::{accept_async};
@@ -78,7 +79,7 @@ impl Proxy {
                             Ok(json_message) => json_message,
                             Err(err) => {
                                 handle_error!(&connections_inner, &addr, engine_local, err);
-                                return Ok(())
+                                Box::new(JsonValue::new_object())
                             }
                         };
 

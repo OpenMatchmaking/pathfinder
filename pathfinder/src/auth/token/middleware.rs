@@ -121,7 +121,7 @@ impl Middleware for JwtTokenMiddleware {
                     PathfinderError::AuthenticationError(message)
                 })
                 // Drop the result, because everything that we need was done
-                .map(|_| { () })
+                .map(|_| ())
         )
     }
 }
