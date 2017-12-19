@@ -64,8 +64,8 @@ impl Serializer {
 #[cfg(test)]
 mod tests {
     use super::{Serializer};
-    use super::super::json::{Null};
-    use super::super::tungstenite::{Message};
+    use super::super::super::json::{Null};
+    use super::super::super::tungstenite::{Message};
 
     #[test]
     fn test_serialize_returns_a_new_message_instance() {

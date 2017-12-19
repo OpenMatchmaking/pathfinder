@@ -93,8 +93,8 @@ pub fn extract_endpoints(conf: Box<Config>) -> HashMap<String, Box<Endpoint>> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::config::{get_config};
-    use super::{Endpoint, extract_endpoints};
+    use config::{get_config};
+    use engine::router::endpoint::{Endpoint, extract_endpoints};
 
     #[test]
     fn test_extract_endpoints_returns_an_empty_dict_by_default() {

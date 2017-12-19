@@ -31,9 +31,9 @@ impl Router {
 
 #[cfg(test)]
 mod tests {
-    use super::super::config::{get_config};
-    use super::super::endpoint::{Endpoint, extract_endpoints};
-    use super::{Router, Result};
+    use config::{get_config};
+    use engine::router::{Router, Endpoint, extract_endpoints};
+    use error::{Result};
 
     fn get_route(file_path: &str, url: &str) -> Result<Box<Endpoint>> {
         let config = get_config(file_path);
