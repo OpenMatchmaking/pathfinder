@@ -1,11 +1,15 @@
+pub mod router;
+pub mod serializer;
+
+pub use self::router::{Router, Endpoint, extract_endpoints};
+pub use self::serializer::{Serializer};
+
 use std::cell::{RefCell};
 use std::collections::{HashMap};
 use std::net::{SocketAddr};
 use std::rc::{Rc};
 
 use super::error::{Result};
-use super::router::{Router};
-use super::serializer::{Serializer};
 
 use futures::sync::{mpsc};
 use json::{JsonValue};

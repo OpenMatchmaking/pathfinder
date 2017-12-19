@@ -18,17 +18,13 @@ extern crate uuid;
 mod auth;
 mod cli;
 mod config;
-mod endpoint;
 mod engine;
 mod error;
 mod proxy;
-mod router;
-mod serializer;
 
 use cli::{CliOptions};
 use config::{get_config};
-use endpoint::{extract_endpoints};
-use router::{Router};
+use engine::router::{Router, extract_endpoints};
 use structopt::StructOpt;
 use proxy::{Proxy};
 

@@ -1,8 +1,11 @@
+pub mod endpoint;
+
+pub use self::endpoint::{Endpoint, extract_endpoints};
+
 use std::collections::{HashMap};
 use std::clone::{Clone};
 
-use super::error::{Result, PathfinderError};
-use super::endpoint::{Endpoint};
+use super::super::error::{Result, PathfinderError};
 
 
 pub struct Router {

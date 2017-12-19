@@ -1,4 +1,4 @@
-use super::error::{Result, PathfinderError};
+use super::super::error::{Result, PathfinderError};
 
 use json::{parse as parse_json, JsonValue};
 use tungstenite::{Message};
