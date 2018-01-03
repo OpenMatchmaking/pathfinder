@@ -1,10 +1,24 @@
+//! A struct that represents an endpoint and related data with it.
+//!
+
 extern crate config;
 
 use std::collections::{HashMap, HashSet};
 use error::PathfinderError;
 use self::config::{Config, Value};
 
-
+/// A struct which stores an original URL that must be converted to the
+/// certain microservice endpoint.
+///
+/// # Example
+/// ```
+/// use engine::router::{Endpoint};
+///
+/// let endpoint = Endpoint::new(&"/api/matchmaking/search/", &"matchmaking.search");
+/// assert_eq!(endpoint.get_url(), String::from("/api/matchmaking/search/"));
+/// assert_eq!(endpoint.get_microservice(), String::from("matchmaking.search"));
+/// ```
+///
 #[derive(Debug, Clone)]
 pub struct Endpoint {
     url: String,
@@ -13,6 +27,7 @@ pub struct Endpoint {
 
 
 impl Endpoint {
+    /// Returns a new instance of `Endpoint`.
     pub fn new(url: &str, microservice: &str) -> Endpoint {
         Endpoint {
             url: url.to_string(),
@@ -20,16 +35,19 @@ impl Endpoint {
         }
     }
 
+    /// Returns an original URL for which necessary to do a transformation.
     pub fn get_url(&self) -> String {
         self.url.clone()
     }
 
+    /// Returns a microservice name.
     pub fn get_microservice(&self) -> String {
         self.microservice.clone()
     }
 }
 
 
+/// Extract a value configuration object as a string if it exists. Otherwise returns an empty string.
 fn get_value_from_config_as_str(conf: &HashMap<String, Value>, key: &str) -> String {
     match conf.get(key) {
         Some(value) => value.to_owned().into_str().unwrap(),
@@ -38,8 +56,8 @@ fn get_value_from_config_as_str(conf: &HashMap<String, Value>, key: &str) -> Str
 }
 
 
-/// Returns a HashMap so that it contains only mapping from URL into
-/// certain Kafka topic.
+/// Returns a HashMap with mapping for URL onto certain queue/topic name that
+/// were extracted from a configuration.
 pub fn extract_endpoints(conf: Box<Config>) -> HashMap<String, Box<Endpoint>> {
     let mut endpoints = HashMap::new();
 
