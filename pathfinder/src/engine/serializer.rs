@@ -41,6 +41,7 @@ use tungstenite::{Message};
 /// ```
 ///
 
+
 pub struct Serializer {
 }
 
@@ -60,9 +61,9 @@ impl Serializer {
 
     /// Transforms an instance of the `tungstenite::Message` type into JSON object.
     pub fn deserialize(&self, message: &Message) -> Result<Box<JsonValue>> {
-         let text_message = try!(self.parse_into_text(message));
-         let mut json_message = try!(self.parse_into_json(text_message.as_str()));
-         json_message = try!(self.validate_json(json_message));
+         let text_message = self.parse_into_text(message)?;
+         let mut json_message = self.parse_into_json(text_message.as_str())?;
+         json_message = self.validate_json(json_message)?;
          Ok(json_message)
     }
 

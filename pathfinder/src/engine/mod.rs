@@ -69,7 +69,7 @@ impl Engine {
     }
 
     fn prepare_request(&self, message: &Message) -> Result<Box<JsonValue>> {
-        let json = try!(self.deserialize_message(message));
+        let json = self.deserialize_message(message)?;
         let mut request = Box::new(object!{
             "headers" => object!{},
             "content" => object!{}
