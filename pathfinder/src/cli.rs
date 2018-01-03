@@ -76,4 +76,10 @@ pub struct CliOptions {
                 long = "validate",
                 help = "Validate a token that was specified with data")]
     pub validate: bool,
+
+    #[structopt(short = "l",
+                long = "--log-level",
+                help = "Verbosity level filter of the logger",
+                default_value = "info")]
+    pub log_level: String,
 }

@@ -1,3 +1,4 @@
+extern crate chrono;
 extern crate futures;
 #[macro_use]
 extern crate json;
@@ -21,6 +22,7 @@ mod config;
 #[macro_use]
 mod engine;
 mod error;
+mod logging;
 mod proxy;
 
 use cli::{CliOptions};
@@ -28,11 +30,17 @@ use config::{get_config};
 use engine::{Engine};
 use engine::router::{Router, extract_endpoints};
 use structopt::StructOpt;
+use logging::{setup_logger};
 use proxy::{Proxy};
 
 
 fn main() {
     let cli = CliOptions::from_args();
+    match setup_logger(&cli) {
+        Ok(_) => {},
+        Err(err) => println!("Logger isn't instantiated: {}", err)
+    };
+
     let config = get_config(&cli.config);
     let endpoints = extract_endpoints(config);
     let router = Box::new(Router::new(endpoints));
