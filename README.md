@@ -4,23 +4,26 @@ WebSocket-over-Kafka reverse proxy
 # Usage
 ```
 USAGE:
-    pathfinder [OPTIONS]
+    pathfinder [FLAGS] [OPTIONS]
 
 FLAGS:
-    -h, --help       Prints help information
-    -v, --validate    Validate WebSocket header with token
-    -V, --version    Prints version information
+    -h, --help        Prints help information
+    -v, --validate    Validate a token that was specified with data
+    -V, --version     Prints version information
 
 OPTIONS:
-    -c, --config <config>                    Path to a custom settings file [default: ""]
+    -c, --config <config>                    Path to a custom settings file [default: ]
     -i, --ip <ip>                            The used IP for a server [default: 127.0.0.1]
+    -k, --jwt-secret <jwt_secret_key>        Secret key for a JWT validation [default: secret]
     -x, --kafka-ip <kafka_ip>                The used IP by Kafka broker [default: 127.0.0.1]
     -z, --kafka-port <kafka_port>            The listened port by Kafka broker [default: 9092]
+    -l, --log-level <log_level>              Verbosity level filter of the logger [default: info]
     -p, --port <port>                        The listened port [default: 8080]
     -r, --redis-ip <redis_ip>                The used IP by Redis [default: 127.0.0.1]
-    -y, --redis-password <redis_password>    Password for connecting to a redis [default: ""]
-    -C, --cert <ssl_certificate>             Path to a SSL certificate [default: ""]
-    -K, --key <ssl_public_key>               Path to a SSL public key [default: ""]
+    -y, --redis-password <redis_password>    Password for connecting to redis [default: ]
+    -t, --redis-port <redis_port>            The listened port by Redis [default: 6379]
+    -C, --cert <ssl_certificate>             Path to a SSL certificate [default: ]
+    -K, --key <ssl_public_key>               Path to a SSL public key [default: ]
 ```
 
 # Configuration file
