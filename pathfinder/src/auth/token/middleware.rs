@@ -1,3 +1,5 @@
+extern crate log;
+
 use std::str;
 
 use super::super::super::error::{Result, PathfinderError};
@@ -86,7 +88,7 @@ impl Middleware for JwtTokenMiddleware {
                         })
                         .map_err(|_| {
                             let message = String::from("An invalid password for Redis instance.");
-                            println!("{}", message);
+                            error!("{}", message);
                             RedisError::Remote(message)
                         })
                         .map(|connection| connection)

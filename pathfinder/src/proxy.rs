@@ -110,7 +110,7 @@ impl Proxy {
                     // Close the connection after using
                     handle_local.spawn(connection.then(move |_| {
                         connections_local.borrow_mut().remove(&addr);
-                        println!("Connection {} closed.", addr);
+                        debug!("Connection {} closed.", addr);
                         Ok(())
                     }));
 
@@ -118,7 +118,7 @@ impl Proxy {
                 })
                 // An error occurred during the WebSocket handshake
                 .or_else(|err| {
-                    println!("{}", err.description());
+                    debug!("{}", err.description());
                     Ok(())
                 })
         });

@@ -10,9 +10,9 @@ pub fn get_config(file_path: &str) -> Box<Config> {
 
     if file_path != "" {
         conf.merge(File::with_name(file_path))
-            .map_err(|why|
+            .map_err(|err|
                 println!("Error during reading file: {}. \
-                          Changes won't applied.", why)
+                          Changes won't applied.", err)
             )
             .and_then(|new_config| Ok(new_config))
             .is_ok();
