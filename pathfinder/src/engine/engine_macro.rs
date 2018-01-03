@@ -1,4 +1,4 @@
-//! Macros for a work with `engine::Engine`
+//! Macros for a work with `Engine`
 //!
 //! Utility wrappers around an instance of the `engine::Engine` type, so that
 //! it simplify an existing codebase and makes it more readable.
