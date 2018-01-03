@@ -1,4 +1,4 @@
-//! Serializers and deserializers structs for a data
+//! Serializer and deserializer structure for a data
 //!
 //! This module is intended for transforming incoming data (which are
 //! `tungstenite::Message` objects) to JSON objects and preparing responses
@@ -40,8 +40,6 @@ use tungstenite::{Message};
 /// println!("{:?}", instance.deserialize(&message))
 /// ```
 ///
-
-
 pub struct Serializer {
 }
 
