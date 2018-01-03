@@ -1,8 +1,11 @@
 extern crate chrono;
 extern crate futures;
+extern crate fern;
 #[macro_use]
 extern crate json;
 extern crate jsonwebtoken;
+#[macro_use]
+extern crate log;
 extern crate tokio_core;
 extern crate tokio_tungstenite;
 extern crate tungstenite;

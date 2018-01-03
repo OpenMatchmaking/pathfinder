@@ -1,12 +1,13 @@
-extern crate log;
 extern crate fern;
 extern crate chrono;
+extern crate log;
 
 use std;
 
 use cli::{CliOptions};
 
 use self::log::{LevelFilter};
+use self::fern::colors::{ColoredLevelConfig};
 
 
 pub fn setup_logger(cli: &CliOptions) -> Result<(), fern::InitError> {
@@ -22,13 +23,14 @@ pub fn setup_logger(cli: &CliOptions) -> Result<(), fern::InitError> {
         },
     };
 
+    let colors = ColoredLevelConfig::new();
     fern::Dispatch::new()
-        .format(|out, message, record| {
+        .format(move |out, message, record| {
             out.finish(format_args!(
                 "{}[{}][{}] {}",
                 chrono::Local::now().format("[%Y-%m-%d][%H:%M:%S]"),
                 record.target(),
-                record.level(),
+                colors.color(record.level()),
                 message
             ))
         })
