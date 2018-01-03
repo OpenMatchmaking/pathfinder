@@ -14,6 +14,10 @@ pub fn setup_logger(cli: &CliOptions) -> Result<(), fern::InitError> {
         Ok(level) => level,
         Err(_) => {
             println!("Logging level with value={} is invalid. INFO level was set by default instead.", cli.log_level);
+            println!("Use one of available logging levels: {:?}", vec![
+                LevelFilter::Off, LevelFilter::Error, LevelFilter::Warn,
+                LevelFilter::Info, LevelFilter::Debug, LevelFilter::Trace
+            ]);
             LevelFilter::Info
         },
     };
