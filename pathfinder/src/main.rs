@@ -19,14 +19,14 @@ extern crate structopt;
 extern crate structopt_derive;
 extern crate uuid;
 
-mod auth;
-mod cli;
-mod config;
+pub mod auth;
+pub mod cli;
+pub mod config;
 #[macro_use]
-mod engine;
-mod error;
-mod logging;
-mod proxy;
+pub mod engine;
+pub mod error;
+pub mod logging;
+pub mod proxy;
 
 use cli::{CliOptions};
 use config::{get_config};
