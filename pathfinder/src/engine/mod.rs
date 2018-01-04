@@ -45,18 +45,9 @@ impl Engine {
     }
 
     /// Main handler for generating response per each incoming request.
-    pub fn handle(&self, message: &Message, client: &SocketAddr, connections: &ActiveConnections) {
+    pub fn handle(&self, message: Box<JsonValue>, client: &SocketAddr, connections: &ActiveConnections) {
         let transmitter = &connections.borrow_mut()[&client];
-
-        let request = match self.prepare_request(message) {
-            Ok(json_object) => json_object,
-            Err(err) => {
-                let formatted_error = format!("{}", err);
-                let error_message = self.wrap_an_error(formatted_error.as_str());
-                transmitter.unbounded_send(error_message).unwrap();
-                return
-            }
-        };
+        let request = self.prepare_request(message);
 
         println!("{}", request);
         let response = self.prepare_response(request);
@@ -82,16 +73,15 @@ impl Engine {
         serializer.deserialize(message)
     }
 
-    /// Converts a `tungstenite::Message` message into the JSON object.
-    fn prepare_request(&self, message: &Message) -> Result<Box<JsonValue>> {
-        let json = self.deserialize_message(message)?;
+    /// Converts a JSON object into a message for a message broker.
+    fn prepare_request(&self, json: Box<JsonValue>) -> Box<JsonValue> {
         let mut request = Box::new(object!{
             "headers" => object!{},
             "content" => object!{}
         });
 
         self.generate_request_headers(&mut request, json);
-        Ok(request)
+        request
     }
 
     /// Converts a JSON object into the `tungstenite::Message` message.

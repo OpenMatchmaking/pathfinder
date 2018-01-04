@@ -107,6 +107,11 @@ impl Proxy {
                                 Ok(())
                             });
 
+                        // 3. Put request into a queue in RabbitMQ and receive the response
+                        let _rabbitmq_future = engine_local.borrow_mut().handle(
+                            json_message, &addr, &connections_inner
+                        );
+
                         handle_inner.spawn(auth_future);
                         Ok(())
                     });
