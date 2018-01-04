@@ -16,3 +16,12 @@ services:
       - redis:redis
     ports:
       - "8081:8081"
+
+  rabbitmq:
+    image: bitnami/rabbitmq:latest
+    ports:
+      - 5672:5672
+      - 15672:15672
+    environment:
+      - RABBITMQ_USERNAME=user
+      - RABBITMQ_PASSWORD=password

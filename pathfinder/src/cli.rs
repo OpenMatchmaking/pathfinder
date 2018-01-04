@@ -10,7 +10,7 @@ extern crate structopt;
 #[derive(StructOpt, Debug)]
 #[structopt(name = "Pathfinder",
             version = "0.1.0",
-            about = "WebSocket-over-Kafka reverse proxy")]
+            about = "WebSocket-over-RabbitMQ reverse proxy")]
 pub struct CliOptions {
     #[structopt(short = "c",
                 long = "config",
@@ -43,16 +43,28 @@ pub struct CliOptions {
     pub ssl_public_key: String,
 
     #[structopt(short = "x",
-                long = "kafka-ip",
-                help = "The used IP by Kafka broker",
+                long = "rabbitmq-ip",
+                help = "The used IP by RabbitMQ broker",
                 default_value = "127.0.0.1")]
-    pub kafka_ip: String,
+    pub rabbitmq_ip: String,
 
     #[structopt(short = "z",
-                long = "kafka-port",
-                help = "The listened port by Kafka broker",
-                default_value = "9092")]
-    pub kafka_port: u16,
+                long = "rabbitmq-port",
+                help = "The listened port by RabbitMQ broker",
+                default_value = "5672")]
+    pub rabbitmq_port: u16,
+
+    #[structopt(short = "a",
+                long = "rabbitmq-user",
+                help = "A RabbitMQ application username",
+                default_value = "user")]
+    pub rabbitmq_username: String,
+
+    #[structopt(short = "s",
+                long = "rabbitmq-password",
+                help = "A RabbitMQ application password",
+                default_value = "password")]
+    pub rabbitmq_password: String,
 
     #[structopt(short = "r",
                 long = "redis-ip",
