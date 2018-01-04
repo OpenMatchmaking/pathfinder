@@ -1,4 +1,4 @@
-//! Wrappers for a work with application configuration
+//! Wrappers for handling an application configuration
 //!
 
 extern crate config;
