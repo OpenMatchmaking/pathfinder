@@ -25,6 +25,7 @@ use super::error::{Result};
 
 use futures::sync::{mpsc};
 use json::{JsonValue};
+use tokio_core::reactor::{Handle};
 use tungstenite::{Message};
 use uuid::{Uuid};
 
@@ -50,7 +51,7 @@ impl Engine {
     }
 
     /// Main handler for generating a response per each incoming request.
-    pub fn handle(&self, message: Box<JsonValue>, client: &SocketAddr, connections: &ActiveConnections) {
+    pub fn handle(&self, message: Box<JsonValue>, client: &SocketAddr, connections: &ActiveConnections, _handle: &Handle) {
         let transmitter = &connections.borrow_mut()[&client];
         let request = self.prepare_request(message);
 

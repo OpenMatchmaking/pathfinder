@@ -7,6 +7,8 @@ extern crate fern;
 #[macro_use]
 extern crate json;
 extern crate jsonwebtoken;
+extern crate lapin_futures_rustls;
+extern crate lapin_futures_tls_api;
 #[macro_use]
 extern crate log;
 extern crate tokio_core;

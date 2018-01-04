@@ -22,12 +22,13 @@ use auth::token::middleware::{JwtTokenMiddleware};
 use cli::{CliOptions};
 use futures::sync::{mpsc};
 use futures::{Future, Sink};
-use futures::stream::{Stream};
+use futures::stream::{Stream, SplitSink};
 use json::{JsonValue};
-use tokio_core::net::{TcpListener};
+use tokio_core::net::{TcpListener, TcpStream};
 use tokio_core::reactor::{Core};
 use tokio_tungstenite::{accept_async};
 use tungstenite::protocol::{Message};
+use tokio_tungstenite::{WebSocketStream};
 
 
 /// A reverse proxy application.
@@ -109,7 +110,7 @@ impl Proxy {
 
                         // 3. Put request into a queue in RabbitMQ and receive the response
                         let _rabbitmq_future = engine_local.borrow_mut().handle(
-                            json_message, &addr, &connections_inner
+                            json_message, &addr, &connections_inner, &handle_inner
                         );
 
                         handle_inner.spawn(auth_future);
@@ -117,7 +118,7 @@ impl Proxy {
                     });
 
                     // Write back prepared responses
-                    let ws_writer = rx.fold(sink, |mut sink, msg| {
+                    let ws_writer = rx.fold(sink, |mut sink, msg| -> Result<SplitSink<WebSocketStream<TcpStream>>, ()> {
                         sink.start_send(msg).unwrap();
                         Ok(sink)
                     });
