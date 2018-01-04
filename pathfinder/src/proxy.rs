@@ -40,7 +40,7 @@ pub struct Proxy {
 
 impl Proxy {
     /// Returns a new instance of a reverse proxy application.
-    pub fn new(engine: Box<Engine>, cli: &CliOptions) -> Proxy {
+    pub fn new(cli: &CliOptions, engine: Box<Engine>) -> Proxy {
         let auth_middleware: Box<Middleware> = match cli.validate {
             true => Box::new(JwtTokenMiddleware::new(cli)),
                _ => Box::new(EmptyMiddleware::new(cli))

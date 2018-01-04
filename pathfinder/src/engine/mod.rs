@@ -7,17 +7,20 @@
 
 #[macro_use]
 pub mod engine_macro;
+pub mod rabbitmq;
 pub mod router;
 pub mod serializer;
 
 pub use self::router::{Router, Endpoint, extract_endpoints};
 pub use self::serializer::{Serializer};
+pub use self::rabbitmq::{RabbitMQClient};
 
 use std::cell::{RefCell};
 use std::collections::{HashMap};
 use std::net::{SocketAddr};
 use std::rc::{Rc};
 
+use super::cli::{CliOptions};
 use super::error::{Result};
 
 use futures::sync::{mpsc};
@@ -32,19 +35,21 @@ pub type ActiveConnections = Rc<RefCell<HashMap<SocketAddr, mpsc::UnboundedSende
 
 /// Proxy engine for processing messages, handling errors and communicating with a message broker.
 pub struct Engine {
-    router: Box<Router>
+    router: Box<Router>,
+    rabbitmq_client: Box<RabbitMQClient>
 }
 
 
 impl Engine {
     /// Returns a new instance of `Engine`.
-    pub fn new(router: Box<Router>) -> Engine {
+    pub fn new(cli: &CliOptions, router: Box<Router>) -> Engine {
         Engine {
-            router: router
+            router: router,
+            rabbitmq_client: Box::new(RabbitMQClient::new(cli))
         }
     }
 
-    /// Main handler for generating response per each incoming request.
+    /// Main handler for generating a response per each incoming request.
     pub fn handle(&self, message: Box<JsonValue>, client: &SocketAddr, connections: &ActiveConnections) {
         let transmitter = &connections.borrow_mut()[&client];
         let request = self.prepare_request(message);
