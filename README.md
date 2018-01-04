@@ -1,5 +1,5 @@
 # pathfinder
-WebSocket-over-Kafka reverse proxy
+WebSocket-over-RabbitMQ reverse proxy
 
 # Usage
 ```
