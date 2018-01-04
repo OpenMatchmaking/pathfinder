@@ -1,8 +1,6 @@
 extern crate log;
 
-use std::str;
-
-use super::super::super::error::{Result, PathfinderError};
+use super::super::super::error::{PathfinderError};
 use auth::token::jwt::{DEFAULT_ISSUER, validate};
 use auth::middleware::{JsonMessage, Middleware, MiddlewareFuture};
 
@@ -36,16 +34,6 @@ impl JwtTokenMiddleware {
             jwt_secret: cli.jwt_secret_key.clone(),
             redis_address: format!("{}:{}", cli.redis_ip, cli.redis_port),
             redis_password: redis_password
-        }
-    }
-
-    fn extract_token_from_header(&self, raw_token: &[u8]) -> Result<String> {
-        match str::from_utf8(raw_token) {
-            Ok(parsed_value) => Ok(String::from(parsed_value)),
-            Err(_) => {
-                let message = String::from("Token is invalid.");
-                Err(PathfinderError::AuthenticationError(message))
-            }
         }
     }
 
