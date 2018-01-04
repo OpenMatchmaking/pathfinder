@@ -1,3 +1,6 @@
+//! WebSocket-over-RabbitMQ reverse proxy
+//!
+
 extern crate chrono;
 extern crate futures;
 extern crate fern;
