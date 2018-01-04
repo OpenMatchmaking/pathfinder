@@ -1,3 +1,13 @@
+//! Logging module
+//!
+//! This module provides a logging opportunities for the pathfinder application
+//! so that all output in console will be handled by fern logging tool.
+//!
+//! # Useful links
+//! * [log crate documentation](https://docs.rs/log)
+//! * [fern crate documentation](https://docs.rs/fern/*/fern/)
+//!
+
 extern crate fern;
 extern crate chrono;
 extern crate log;
@@ -10,6 +20,7 @@ use self::log::{LevelFilter};
 use self::fern::colors::{ColoredLevelConfig};
 
 
+/// Initialize a logger from the fern crate.
 pub fn setup_logger(cli: &CliOptions) -> Result<(), fern::InitError> {
     let logging_level = match cli.log_level.parse::<LevelFilter>() {
         Ok(level) => level,
