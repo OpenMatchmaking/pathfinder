@@ -1,3 +1,14 @@
+//! A reverse proxy application.
+//!
+//! This module provides a reverse proxy implementation for the Open
+//! Matchmaking project.
+//!
+//! The purposes of the application  are handling client connections, applying
+//! a middleware with checks for a token when it was specified and communicating
+//! with a message broker for getting responses from microservices in the certain
+//! format.
+//!
+
 use std::cell::{RefCell};
 use std::collections::{HashMap};
 use std::error::{Error};
@@ -12,12 +23,14 @@ use cli::{CliOptions};
 use futures::sync::{mpsc};
 use futures::{Future, Sink};
 use futures::stream::{Stream};
+use json::{JsonValue};
 use tokio_core::net::{TcpListener};
 use tokio_core::reactor::{Core};
 use tokio_tungstenite::{accept_async};
 use tungstenite::protocol::{Message};
 
 
+/// A reverse proxy application.
 pub struct Proxy {
     engine: Rc<RefCell<Box<Engine>>>,
     connections: Rc<RefCell<HashMap<SocketAddr, mpsc::UnboundedSender<Message>>>>,
@@ -26,6 +39,7 @@ pub struct Proxy {
 
 
 impl Proxy {
+    /// Returns a new instance of a reverse proxy application.
     pub fn new(engine: Box<Engine>, cli: &CliOptions) -> Proxy {
         let auth_middleware: Box<Middleware> = match cli.validate {
             true => Box::new(JwtTokenMiddleware::new(cli)),
@@ -39,6 +53,7 @@ impl Proxy {
         }
     }
 
+    /// Run the server on the specified address and port.
     pub fn run(&self, address: SocketAddr) {
         let mut core = Core::new().unwrap();
         let handle = core.handle();
@@ -77,11 +92,8 @@ impl Proxy {
                         let json_message = match engine_local.borrow().deserialize_message(&message) {
                             Ok(json_message) => json_message,
                             Err(err) => {
-                                let tx_nested = &connections_inner.borrow_mut()[&addr];
-                                let formatted_error = format!("{}", err);
-                                let error_message = engine_local.borrow().wrap_an_error(formatted_error.as_str());
-                                tx_nested.unbounded_send(error_message).unwrap();
-                                return Ok(())
+                                handle_error!(&connections_inner, &addr, engine_local, err);
+                                Box::new(JsonValue::new_object())
                             }
                         };
 
@@ -90,10 +102,7 @@ impl Proxy {
                             .process_request(&json_message, &handle_inner)
                             .then(move |result| {
                                 if result.is_err() {
-                                    let tx_nested = &connections_nested.borrow_mut()[&addr];
-                                    let formatted_error = format!("{}", result.unwrap_err());
-                                    let error_message = engine_nested.borrow().wrap_an_error(formatted_error.as_str());
-                                    tx_nested.unbounded_send(error_message).unwrap();
+                                    handle_error!(&connections_nested, &addr, engine_nested, result.unwrap_err());
                                 };
                                 Ok(())
                             });
@@ -115,7 +124,7 @@ impl Proxy {
                     // Close the connection after using
                     handle_local.spawn(connection.then(move |_| {
                         connections_local.borrow_mut().remove(&addr);
-                        println!("Connection {} closed.", addr);
+                        debug!("Connection {} closed.", addr);
                         Ok(())
                     }));
 
@@ -123,7 +132,7 @@ impl Proxy {
                 })
                 // An error occurred during the WebSocket handshake
                 .or_else(|err| {
-                    println!("{}", err.description());
+                    debug!("{}", err.description());
                     Ok(())
                 })
         });

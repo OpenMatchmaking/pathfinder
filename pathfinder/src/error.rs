@@ -1,3 +1,10 @@
+//! Error handlers for an application
+//!
+//! This module is intended for simplifying error handling and propagating
+//! them in an existing application, easy to use and quite extendable in
+//! the future.
+//!
+
 extern crate config;
 
 use std::io;
@@ -10,10 +17,11 @@ use self::config::{ConfigError};
 use jsonwebtoken as jwt;
 
 
-/// Helper alias for `Result` objects that return a Pathfinder error.
+/// Type alias for `Result` objects that return a Pathfinder error.
 pub type Result<T> = result::Result<T, PathfinderError>;
 
 
+/// An enum of all possible errors which could occur during the work of reverse proxy.
 #[derive(Debug)]
 pub enum PathfinderError {
     /// The error that occurred during work with I/O.
@@ -28,7 +36,7 @@ pub enum PathfinderError {
     /// doesn't not exist.
     EndpointNotFound(String),
     /// Occurs during processing an incoming message (e.g. parsing,
-    /// converting into JSON)
+    /// converting into JSON).
     DecodingError(String),
     /// The error that occurred when token isn't specified or invalid.
     AuthenticationError(String)

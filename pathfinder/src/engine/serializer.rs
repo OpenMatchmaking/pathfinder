@@ -1,29 +1,72 @@
+//! Serializer and deserializer structure for a data
+//!
+//! This module is intended for transforming incoming data (which are
+//! `tungstenite::Message` objects) to JSON objects and preparing responses
+//! for client before sending through transmitters.
+//!
+
 use super::super::error::{Result, PathfinderError};
 
 use json::{parse as parse_json, JsonValue};
 use tungstenite::{Message};
 
 
+/// A specialized struct for deserializing incoming messages into JSON and
+/// serializing responses into `tungstenite::Message` objects, so, that they
+/// could be send to a client.
+///
+/// # Examples
+///
+/// Serializing a JSON object into message:
+///
+/// ```
+/// use engine::{Serializer};
+///
+/// let instance = Serializer::new();
+/// let json = object!{"test" => "serialize"};
+/// let response = json.dump();
+/// println!("{:?}", instance.serialize(response))
+/// ```
+///
+/// Derializing a message to JSON object:
+///
+/// ```
+/// use engine::{Serializer};
+/// use tungstenite::{Message};
+///
+/// let json = object!{"test" => "serialize"};
+/// let message = Message::Text(json.dump());
+/// let instance = Serializer::new();
+/// println!("{:?}", instance.deserialize(&message))
+/// ```
+///
 pub struct Serializer {
 }
 
 
 impl Serializer {
+    /// Returns a new instance of `Serializer`.
     pub fn new() -> Serializer {
         Serializer {}
     }
 
+    /// Converts a UTF-8 encoded `std::string::String` into an instance of
+    /// the `tungstenite::Message` type, so that this message can be send to
+    /// a client.
     pub fn serialize(&self, message: String) -> Result<Message> {
         Ok(Message::Text(message))
     }
 
+    /// Transforms an instance of the `tungstenite::Message` type into JSON object.
     pub fn deserialize(&self, message: &Message) -> Result<Box<JsonValue>> {
-         let text_message = try!(self.parse_into_text(message));
-         let mut json_message = try!(self.parse_into_json(text_message.as_str()));
-         json_message = try!(self.validate_json(json_message));
+         let text_message = self.parse_into_text(message)?;
+         let mut json_message = self.parse_into_json(text_message.as_str())?;
+         json_message = self.validate_json(json_message)?;
          Ok(json_message)
     }
 
+    /// Parses an instance of the `tungstenite::Message` type and returns a UTF-8
+    /// encoded string of the `std::string::String` type.
     fn parse_into_text(&self, message: &Message) -> Result<String> {
         match message.clone().into_text() {
             Ok(text_message) => Ok(text_message),
@@ -34,6 +77,7 @@ impl Serializer {
         }
     }
 
+    /// Parses a UTF-8 string and converts it into JSON object.
     fn parse_into_json(&self, message: &str) -> Result<Box<JsonValue>> {
         match parse_json(message) {
             Ok(message) => Ok(Box::new(message)),
@@ -44,6 +88,7 @@ impl Serializer {
         }
     }
 
+    /// Validates a JSON object on required fields and values.
     fn validate_json(&self, json: Box<JsonValue>) -> Result<Box<JsonValue>> {
         if json["url"].is_null() {
             let error_message = String::from("Key `url` is missing or value is `null`");
@@ -64,8 +109,8 @@ impl Serializer {
 #[cfg(test)]
 mod tests {
     use super::{Serializer};
-    use super::super::json::{Null};
-    use super::super::tungstenite::{Message};
+    use super::super::super::json::{Null};
+    use super::super::super::tungstenite::{Message};
 
     #[test]
     fn test_serialize_returns_a_new_message_instance() {

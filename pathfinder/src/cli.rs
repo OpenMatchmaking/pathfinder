@@ -1,6 +1,12 @@
+//! Wrappers for interaction with CLI
+//!
+//! For more details about using the structopt crate you can find [here](https://github.com/TeXitoi/structopt).
+//!
+
 extern crate structopt;
 
 
+/// A structure that defines available arguments and options for CLI
 #[derive(StructOpt, Debug)]
 #[structopt(name = "Pathfinder",
             version = "0.1.0",
@@ -76,4 +82,10 @@ pub struct CliOptions {
                 long = "validate",
                 help = "Validate a token that was specified with data")]
     pub validate: bool,
+
+    #[structopt(short = "l",
+                long = "--log-level",
+                help = "Verbosity level filter of the logger",
+                default_value = "info")]
+    pub log_level: String,
 }

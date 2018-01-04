@@ -1,3 +1,6 @@
+//! Authentication / authorization layer
+//!
+
 pub mod middleware;
 pub mod token;
 

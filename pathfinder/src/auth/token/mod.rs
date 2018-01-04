@@ -1,3 +1,6 @@
+//! Token implementation for authentication / authorization layer
+//!
+
 pub mod jwt;
 pub mod middleware;
 

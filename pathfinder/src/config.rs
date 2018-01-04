@@ -1,18 +1,22 @@
+//! Wrappers for handling an application configuration
+//!
+
 extern crate config;
 
 use self::config::{Config, File};
 
 
-// Creates the default configuration for an application with data,
-// read from file.
+/// Returns a configuration for the application with data that was
+/// read from a file. When specified an empty string, returns a
+/// default configuration.
 pub fn get_config(file_path: &str) -> Box<Config> {
     let mut conf = Box::new(Config::default());
 
     if file_path != "" {
         conf.merge(File::with_name(file_path))
-            .map_err(|why|
+            .map_err(|err|
                 println!("Error during reading file: {}. \
-                          Changes won't applied.", why)
+                          Changes won't applied.", err)
             )
             .and_then(|new_config| Ok(new_config))
             .is_ok();
