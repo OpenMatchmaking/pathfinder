@@ -1,4 +1,4 @@
-//! Wrappers for validating a JSON Web Token
+//! JSON Web Token support for pathfinder project
 //!
 
 use super::super::super::error::{Result, PathfinderError};
