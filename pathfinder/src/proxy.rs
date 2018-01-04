@@ -1,3 +1,14 @@
+//! A reverse proxy application.
+//!
+//! This module provides a reverse proxy implementation for the Open
+//! Matchmaking project.
+//!
+//! The purposes of the application  are handling client connections, applying
+//! a middleware with checks for a token when it was specified and communicating
+//! with a message broker for getting responses from microservices in the certain
+//! format.
+//!
+
 use std::cell::{RefCell};
 use std::collections::{HashMap};
 use std::error::{Error};
@@ -19,6 +30,7 @@ use tokio_tungstenite::{accept_async};
 use tungstenite::protocol::{Message};
 
 
+/// A reverse proxy application.
 pub struct Proxy {
     engine: Rc<RefCell<Box<Engine>>>,
     connections: Rc<RefCell<HashMap<SocketAddr, mpsc::UnboundedSender<Message>>>>,
@@ -27,6 +39,7 @@ pub struct Proxy {
 
 
 impl Proxy {
+    /// Returns a new instance of a reverse proxy application.
     pub fn new(engine: Box<Engine>, cli: &CliOptions) -> Proxy {
         let auth_middleware: Box<Middleware> = match cli.validate {
             true => Box::new(JwtTokenMiddleware::new(cli)),
@@ -40,6 +53,7 @@ impl Proxy {
         }
     }
 
+    /// Run the server on the specified address and port.
     pub fn run(&self, address: SocketAddr) {
         let mut core = Core::new().unwrap();
         let handle = core.handle();
