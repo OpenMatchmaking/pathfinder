@@ -1,12 +1,9 @@
 //! Middleware implementations with token support
 //!
 
-extern crate log;
-
 use super::super::super::error::{PathfinderError};
 use auth::token::jwt::{DEFAULT_ISSUER, validate};
 use auth::middleware::{JsonMessage, Middleware, MiddlewareFuture};
-
 
 use cli::{CliOptions};
 use futures::{Future};

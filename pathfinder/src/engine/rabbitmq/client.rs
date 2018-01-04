@@ -1,6 +1,5 @@
 //! An asynchronous RabbitMQ client for proxy engine
 //!
-extern crate futures;
 
 use std::io;
 
