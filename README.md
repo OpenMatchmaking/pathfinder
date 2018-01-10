@@ -8,6 +8,7 @@ USAGE:
 
 FLAGS:
     -h, --help        Prints help information
+    -s, --secured     Use RabbitMQ with SSL
     -v, --validate    Validate a token that was specified with data
     -V, --version     Prints version information
 
@@ -17,10 +18,10 @@ OPTIONS:
     -k, --jwt-secret <jwt_secret_key>              Secret key for a JWT validation [default: secret]
     -l, --log-level <log_level>                    Verbosity level filter of the logger [default: info]
     -p, --port <port>                              The listened port [default: 8080]
-    -x, --rabbitmq-ip <rabbitmq_ip>                The used IP by RabbitMQ broker [default: 127.0.0.1]
-    -s, --rabbitmq-password <rabbitmq_password>    A RabbitMQ application password [default: password]
-    -z, --rabbitmq-port <rabbitmq_port>            The listened port by RabbitMQ broker [default: 5672]
-    -a, --rabbitmq-user <rabbitmq_username>        A RabbitMQ application username [default: user]
+    -z, --rabbitmq-ip <rabbitmq_ip>                The used IP by RabbitMQ broker [default: 127.0.0.1]
+    -w, --rabbitmq-password <rabbitmq_password>    A RabbitMQ application password [default: password]
+    -x, --rabbitmq-port <rabbitmq_port>            The listened port by RabbitMQ broker [default: 5672]
+    -q, --rabbitmq-user <rabbitmq_username>        A RabbitMQ application username [default: user]
     -r, --redis-ip <redis_ip>                      The used IP by Redis [default: 127.0.0.1]
     -y, --redis-password <redis_password>          Password for connecting to redis [default: ]
     -t, --redis-port <redis_port>                  The listened port by Redis [default: 6379]

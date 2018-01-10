@@ -18,6 +18,7 @@ pub type LapinFuture = Box<Future<Item=lapin::client::Client<AMQPStream>, Error=
 /// A future-based asynchronous RabbitMQ client.
 pub struct RabbitMQClient
 {
+    schema: String,
     username: String,
     password: String,
     host: String,
@@ -28,7 +29,13 @@ pub struct RabbitMQClient
 impl RabbitMQClient {
     /// Returns a new instance of `RabbitMQClient`.
     pub fn new(cli: &CliOptions) -> RabbitMQClient {
+        let schema = match cli.rabbitmq_secured {
+            true => "amqps",
+            false => "amqp",
+        };
+
         RabbitMQClient {
+            schema: schema.to_string(),
             username: cli.rabbitmq_username.clone(),
             password: cli.rabbitmq_password.clone(),
             host: cli.rabbitmq_ip.clone(),
@@ -45,7 +52,8 @@ impl RabbitMQClient {
     /// Generates a connection URL to RabbitMQ broker.
     fn get_url_to_rabbitmq(&self) -> String {
         format!(
-            "amqps://{}:{}@{}:{}/?heartbeat=10",
+            "{}://{}:{}@{}:{}/?heartbeat=10",
+            self.schema,
             self.username,
             self.password,
             self.host,

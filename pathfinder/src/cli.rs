@@ -40,29 +40,34 @@ pub struct CliOptions {
                 default_value = "")]
     pub ssl_public_key: String,
 
-    #[structopt(short = "x",
+    #[structopt(short = "z",
                 long = "rabbitmq-ip",
                 help = "The used IP by RabbitMQ broker",
                 default_value = "127.0.0.1")]
     pub rabbitmq_ip: String,
 
-    #[structopt(short = "z",
+    #[structopt(short = "x",
                 long = "rabbitmq-port",
                 help = "The listened port by RabbitMQ broker",
                 default_value = "5672")]
     pub rabbitmq_port: u16,
 
-    #[structopt(short = "a",
+    #[structopt(short = "q",
                 long = "rabbitmq-user",
                 help = "A RabbitMQ application username",
                 default_value = "user")]
     pub rabbitmq_username: String,
 
-    #[structopt(short = "s",
+    #[structopt(short = "w",
                 long = "rabbitmq-password",
                 help = "A RabbitMQ application password",
                 default_value = "password")]
     pub rabbitmq_password: String,
+
+    #[structopt(short = "s",
+                long = "secured",
+                help = "Use RabbitMQ with SSL")]
+    pub rabbitmq_secured: bool,
 
     #[structopt(short = "r",
                 long = "redis-ip",
