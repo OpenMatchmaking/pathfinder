@@ -2,6 +2,7 @@
 //!
 
 extern crate chrono;
+extern crate clap;
 extern crate futures;
 extern crate fern;
 #[macro_use]

@@ -3,12 +3,16 @@
 //! For more details about using the structopt crate you can find [here](https://github.com/TeXitoi/structopt).
 //!
 
+extern crate clap;
+
+use structopt::StructOpt;
 
 /// A structure that defines available arguments and options for CLI
 #[derive(StructOpt, Debug)]
 #[structopt(name = "Pathfinder",
             version = "0.1.0",
-            about = "WebSocket-over-RabbitMQ reverse proxy")]
+            about = "WebSocket-over-RabbitMQ reverse proxy",
+            setting_raw = "clap::AppSettings::DeriveDisplayOrder")]
 pub struct CliOptions {
     #[structopt(short = "s",
                 long = "secured",

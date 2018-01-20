@@ -7,25 +7,25 @@ USAGE:
     pathfinder [FLAGS] [OPTIONS]
 
 FLAGS:
-    -h, --help        Prints help information
     -s, --secured     Enable creating a SSL connection RabbitMQ
     -v, --validate    Validate a token that was specified with data
+    -h, --help        Prints help information
     -V, --version     Prints version information
 
 OPTIONS:
     -c, --config <config>                                  Path to a custom settings file [default: ]
     -i, --ip <ip>                                          The used IP for a server [default: 127.0.0.1]
-        --jwt-secret <jwt_secret_key>                      Secret key for a JWT validation [default: secret]
-    -l, --log-level <log_level>                            Verbosity level filter of the logger [default: info]
     -p, --port <port>                                      The listened port [default: 8080]
+    -l, --log-level <log_level>                            Verbosity level filter of the logger [default: info]
         --rabbitmq-ip <rabbitmq_ip>                        The used IP by RabbitMQ broker [default: 127.0.0.1]
-        --rabbitmq-password <rabbitmq_password>            A RabbitMQ application password [default: password]
         --rabbitmq-port <rabbitmq_port>                    The listened port by RabbitMQ broker [default: 5672]
-        --rabbitmq-user <rabbitmq_username>                A RabbitMQ application username [default: user]
         --rabbitmq-virtual-host <rabbitmq_virtual_host>    The virtual host of a RabbitMQ node [default: vhost]
+        --rabbitmq-user <rabbitmq_username>                A RabbitMQ application username [default: user]
+        --rabbitmq-password <rabbitmq_password>            A RabbitMQ application password [default: password]
         --redis-ip <redis_ip>                              The used IP by Redis [default: 127.0.0.1]
-        --redis-password <redis_password>                  Password for connecting to redis [default: ]
         --redis-port <redis_port>                          The listened port by Redis [default: 6379]
+        --redis-password <redis_password>                  Password for connecting to redis [default: ]
+        --jwt-secret <jwt_secret_key>                      Secret key for a JWT validation [default: secret]
         --ssl-cert <ssl_certificate>                       Path to a SSL certificate [default: ]
         --ssl-key <ssl_public_key>                         Path to a SSL public key [default: ]
 ```
