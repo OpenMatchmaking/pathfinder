@@ -10,12 +10,22 @@
             version = "0.1.0",
             about = "WebSocket-over-RabbitMQ reverse proxy")]
 pub struct CliOptions {
+    #[structopt(short = "s",
+                long = "secured",
+                help = "Enable creating a SSL connection RabbitMQ")]
+    pub rabbitmq_secured: bool,
+
+    #[structopt(short = "v",
+                long = "validate",
+                help = "Validate a token that was specified with data")]
+    pub validate: bool,
+
     #[structopt(short = "c",
                 long = "config",
                 help = "Path to a custom settings file",
                 default_value = "")]
     pub config: String,
-
+    
     #[structopt(short = "i",
                 long = "ip",
                 help = "The used IP for a server",
@@ -28,15 +38,11 @@ pub struct CliOptions {
                 default_value = "8080")]
     pub port: u16,
 
-    #[structopt(long = "ssl-cert",
-                help = "Path to a SSL certificate",
-                default_value = "")]
-    pub ssl_certificate: String,
-
-    #[structopt(long = "ssl-key",
-                help = "Path to a SSL public key",
-                default_value = "")]
-    pub ssl_public_key: String,
+    #[structopt(short = "l",
+                long = "--log-level",
+                help = "Verbosity level filter of the logger",
+                default_value = "info")]
+    pub log_level: String,
 
     #[structopt(long = "rabbitmq-ip",
                 help = "The used IP by RabbitMQ broker",
@@ -63,11 +69,6 @@ pub struct CliOptions {
                 default_value = "password")]
     pub rabbitmq_password: String,
 
-    #[structopt(short = "s",
-                long = "secured",
-                help = "Enable creating a connection RabbitMQ with SSL")]
-    pub rabbitmq_secured: bool,
-
     #[structopt(long = "redis-ip",
                 help = "The used IP by Redis",
                 default_value = "127.0.0.1")]
@@ -88,14 +89,13 @@ pub struct CliOptions {
                 default_value = "secret")]
     pub jwt_secret_key: String,
 
-    #[structopt(short = "v",
-                long = "validate",
-                help = "Validate a token that was specified with data")]
-    pub validate: bool,
+    #[structopt(long = "ssl-cert",
+                help = "Path to a SSL certificate",
+                default_value = "")]
+    pub ssl_certificate: String,
 
-    #[structopt(short = "l",
-                long = "--log-level",
-                help = "Verbosity level filter of the logger",
-                default_value = "info")]
-    pub log_level: String,
+    #[structopt(long = "ssl-key",
+                help = "Path to a SSL public key",
+                default_value = "")]
+    pub ssl_public_key: String,
 }
