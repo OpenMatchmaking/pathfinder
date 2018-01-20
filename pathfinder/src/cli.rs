@@ -25,7 +25,7 @@ pub struct CliOptions {
                 help = "Path to a custom settings file",
                 default_value = "")]
     pub config: String,
-    
+
     #[structopt(short = "i",
                 long = "ip",
                 help = "The used IP for a server",

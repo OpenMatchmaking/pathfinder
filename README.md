@@ -8,25 +8,26 @@ USAGE:
 
 FLAGS:
     -h, --help        Prints help information
-    -s, --secured     Use RabbitMQ with SSL
+    -s, --secured     Enable creating a SSL connection RabbitMQ
     -v, --validate    Validate a token that was specified with data
     -V, --version     Prints version information
 
 OPTIONS:
-    -c, --config <config>                          Path to a custom settings file [default: ]
-    -i, --ip <ip>                                  The used IP for a server [default: 127.0.0.1]
-    -k, --jwt-secret <jwt_secret_key>              Secret key for a JWT validation [default: secret]
-    -l, --log-level <log_level>                    Verbosity level filter of the logger [default: info]
-    -p, --port <port>                              The listened port [default: 8080]
-    -z, --rabbitmq-ip <rabbitmq_ip>                The used IP by RabbitMQ broker [default: 127.0.0.1]
-    -w, --rabbitmq-password <rabbitmq_password>    A RabbitMQ application password [default: password]
-    -x, --rabbitmq-port <rabbitmq_port>            The listened port by RabbitMQ broker [default: 5672]
-    -q, --rabbitmq-user <rabbitmq_username>        A RabbitMQ application username [default: user]
-    -r, --redis-ip <redis_ip>                      The used IP by Redis [default: 127.0.0.1]
-    -y, --redis-password <redis_password>          Password for connecting to redis [default: ]
-    -t, --redis-port <redis_port>                  The listened port by Redis [default: 6379]
-    -C, --cert <ssl_certificate>                   Path to a SSL certificate [default: ]
-    -K, --key <ssl_public_key>                     Path to a SSL public key [default: ]
+    -c, --config <config>                                  Path to a custom settings file [default: ]
+    -i, --ip <ip>                                          The used IP for a server [default: 127.0.0.1]
+        --jwt-secret <jwt_secret_key>                      Secret key for a JWT validation [default: secret]
+    -l, --log-level <log_level>                            Verbosity level filter of the logger [default: info]
+    -p, --port <port>                                      The listened port [default: 8080]
+        --rabbitmq-ip <rabbitmq_ip>                        The used IP by RabbitMQ broker [default: 127.0.0.1]
+        --rabbitmq-password <rabbitmq_password>            A RabbitMQ application password [default: password]
+        --rabbitmq-port <rabbitmq_port>                    The listened port by RabbitMQ broker [default: 5672]
+        --rabbitmq-user <rabbitmq_username>                A RabbitMQ application username [default: user]
+        --rabbitmq-virtual-host <rabbitmq_virtual_host>    The virtual host of a RabbitMQ node [default: vhost]
+        --redis-ip <redis_ip>                              The used IP by Redis [default: 127.0.0.1]
+        --redis-password <redis_password>                  Password for connecting to redis [default: ]
+        --redis-port <redis_port>                          The listened port by Redis [default: 6379]
+        --ssl-cert <ssl_certificate>                       Path to a SSL certificate [default: ]
+        --ssl-key <ssl_public_key>                         Path to a SSL public key [default: ]
 ```
 
 # Configuration file
