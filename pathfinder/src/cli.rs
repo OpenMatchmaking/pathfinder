@@ -28,73 +28,62 @@ pub struct CliOptions {
                 default_value = "8080")]
     pub port: u16,
 
-    #[structopt(short = "C",
-                long = "cert",
+    #[structopt(long = "ssl-cert",
                 help = "Path to a SSL certificate",
                 default_value = "")]
     pub ssl_certificate: String,
 
-    #[structopt(short = "K",
-                long = "key",
+    #[structopt(long = "ssl-key",
                 help = "Path to a SSL public key",
                 default_value = "")]
     pub ssl_public_key: String,
 
-    #[structopt(short = "z",
-                long = "rabbitmq-ip",
+    #[structopt(long = "rabbitmq-ip",
                 help = "The used IP by RabbitMQ broker",
                 default_value = "127.0.0.1")]
     pub rabbitmq_ip: String,
 
-    #[structopt(short = "x",
-                long = "rabbitmq-port",
+    #[structopt(long = "rabbitmq-port",
                 help = "The listened port by RabbitMQ broker",
                 default_value = "5672")]
     pub rabbitmq_port: u16,
 
-    #[structopt(short = "n",
-                long = "rabbitmq-virtual-host",
+    #[structopt(long = "rabbitmq-virtual-host",
                 help = "The virtual host of a RabbitMQ node",
                 default_value = "vhost")]
     pub rabbitmq_virtual_host: String,
 
-    #[structopt(short = "q",
-                long = "rabbitmq-user",
+    #[structopt(long = "rabbitmq-user",
                 help = "A RabbitMQ application username",
                 default_value = "user")]
     pub rabbitmq_username: String,
 
-    #[structopt(short = "w",
-                long = "rabbitmq-password",
+    #[structopt(long = "rabbitmq-password",
                 help = "A RabbitMQ application password",
                 default_value = "password")]
     pub rabbitmq_password: String,
 
     #[structopt(short = "s",
                 long = "secured",
-                help = "Use RabbitMQ with SSL")]
+                help = "Enable creating a connection RabbitMQ with SSL")]
     pub rabbitmq_secured: bool,
 
-    #[structopt(short = "r",
-                long = "redis-ip",
+    #[structopt(long = "redis-ip",
                 help = "The used IP by Redis",
                 default_value = "127.0.0.1")]
     pub redis_ip: String,
 
-    #[structopt(short = "t",
-                long = "redis-port",
+    #[structopt(long = "redis-port",
                 help = "The listened port by Redis",
                 default_value = "6379")]
     pub redis_port: u16,
 
-    #[structopt(short = "y",
-                long = "redis-password",
+    #[structopt(long = "redis-password",
                 help = "Password for connecting to redis",
                 default_value = "")]
     pub redis_password: String,
 
-    #[structopt(short = "k",
-                long = "jwt-secret",
+    #[structopt(long = "jwt-secret",
                 help = "Secret key for a JWT validation",
                 default_value = "secret")]
     pub jwt_secret_key: String,
