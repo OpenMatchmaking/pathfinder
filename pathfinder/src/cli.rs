@@ -48,10 +48,10 @@ pub struct CliOptions {
                 default_value = "info")]
     pub log_level: String,
 
-    #[structopt(long = "rabbitmq-ip",
-                help = "The used IP by RabbitMQ broker",
+    #[structopt(long = "rabbitmq-host",
+                help = "The used host by RabbitMQ broker",
                 default_value = "127.0.0.1")]
-    pub rabbitmq_ip: String,
+    pub rabbitmq_host: String,
 
     #[structopt(long = "rabbitmq-port",
                 help = "The listened port by RabbitMQ broker",
@@ -73,10 +73,10 @@ pub struct CliOptions {
                 default_value = "password")]
     pub rabbitmq_password: String,
 
-    #[structopt(long = "redis-ip",
-                help = "The used IP by Redis",
+    #[structopt(long = "redis-host",
+                help = "The used host by Redis",
                 default_value = "127.0.0.1")]
-    pub redis_ip: String,
+    pub redis_host: String,
 
     #[structopt(long = "redis-port",
                 help = "The listened port by Redis",

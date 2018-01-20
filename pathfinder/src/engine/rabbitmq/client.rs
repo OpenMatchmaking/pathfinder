@@ -39,7 +39,7 @@ impl RabbitMQClient {
             schema: schema.to_string(),
             username: cli.rabbitmq_username.clone(),
             password: cli.rabbitmq_password.clone(),
-            host: cli.rabbitmq_ip.clone(),
+            host: cli.rabbitmq_host.clone(),
             port: cli.rabbitmq_port,
             virtual_host: cli.rabbitmq_virtual_host.clone()
         }

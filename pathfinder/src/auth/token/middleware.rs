@@ -33,7 +33,7 @@ impl JwtTokenMiddleware {
 
         JwtTokenMiddleware {
             jwt_secret: cli.jwt_secret_key.clone(),
-            redis_address: format!("{}:{}", cli.redis_ip, cli.redis_port),
+            redis_address: format!("{}:{}", cli.redis_host, cli.redis_port),
             redis_password: redis_password
         }
     }
