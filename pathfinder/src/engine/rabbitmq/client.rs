@@ -22,7 +22,8 @@ pub struct RabbitMQClient
     username: String,
     password: String,
     host: String,
-    port: u16
+    port: u16,
+    virtual_host: String
 }
 
 
@@ -39,7 +40,8 @@ impl RabbitMQClient {
             username: cli.rabbitmq_username.clone(),
             password: cli.rabbitmq_password.clone(),
             host: cli.rabbitmq_ip.clone(),
-            port: cli.rabbitmq_port
+            port: cli.rabbitmq_port,
+            virtual_host: cli.rabbitmq_virtual_host.clone()
         }
     }
 
@@ -52,12 +54,13 @@ impl RabbitMQClient {
     /// Generates a connection URL to RabbitMQ broker.
     fn get_url_to_rabbitmq(&self) -> String {
         format!(
-            "{}://{}:{}@{}:{}/?heartbeat=10",
+            "{}://{}:{}@{}:{}/{}?heartbeat=10",
             self.schema,
             self.username,
             self.password,
             self.host,
-            self.port
+            self.port,
+            self.virtual_host
         )
     }
 }

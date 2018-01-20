@@ -52,6 +52,12 @@ pub struct CliOptions {
                 default_value = "5672")]
     pub rabbitmq_port: u16,
 
+    #[structopt(short = "n",
+                long = "rabbitmq-virtual-host",
+                help = "The virtual host of a RabbitMQ node",
+                default_value = "vhost")]
+    pub rabbitmq_virtual_host: String,
+
     #[structopt(short = "q",
                 long = "rabbitmq-user",
                 help = "A RabbitMQ application username",
