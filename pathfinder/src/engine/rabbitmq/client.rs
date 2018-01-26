@@ -4,6 +4,7 @@
 use std::io;
 
 use super::super::super::cli::{CliOptions};
+use super::super::super::error::{PathfinderError};
 
 use futures::future::{Future};
 use lapin_futures_rustls::{AMQPConnectionRustlsExt, lapin};
@@ -13,6 +14,9 @@ use tokio_core::reactor::{Handle};
 
 /// Alias for the lapin future type
 pub type LapinFuture = Box<Future<Item=lapin::client::Client<AMQPStream>, Error=io::Error> + 'static>;
+
+/// Alias for generic future for pathfinder and RabbitMQ
+pub type RabbitMQFuture = Box<Future<Item=(), Error=PathfinderError> + 'static>;
 
 
 /// A future-based asynchronous RabbitMQ client.

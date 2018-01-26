@@ -15,22 +15,24 @@ use std::cell::{RefCell};
 use std::collections::{HashMap};
 use std::net::{SocketAddr};
 use std::rc::{Rc};
+use std::str::{from_utf8};
+use std::vec::Vec;
 
 pub use self::router::{Router, Endpoint, extract_endpoints};
 pub use self::serializer::{Serializer};
-pub use self::rabbitmq::{RabbitMQClient, LapinFuture};
+pub use self::rabbitmq::{RabbitMQClient, RabbitMQFuture};
 
 use super::cli::{CliOptions};
-use super::error::{Result};
+use super::error::{Result, PathfinderError};
 
+use json::{parse as json_parse};
 use futures::{Stream};
 use futures::future::{Future};
 use futures::sync::{mpsc};
-use lapin_futures_rustls::lapin;
-use lapin::types::FieldTable;
-use lapin::channel::{ConfirmSelectOptions};
-use lapin::channel::{BasicPublishOptions, BasicProperties, BasicConsumeOptions};
-use lapin::channel::{QueueDeclareOptions, QueueDeleteOptions, QueueBindOptions};
+use lapin_futures_rustls::lapin::types::{AMQPValue, FieldTable};
+use lapin_futures_rustls::lapin::channel::{ConfirmSelectOptions};
+use lapin_futures_rustls::lapin::channel::{BasicPublishOptions, BasicProperties, BasicConsumeOptions};
+use lapin_futures_rustls::lapin::channel::{QueueDeclareOptions, QueueDeleteOptions, QueueBindOptions};
 use json::{JsonValue};
 use tokio_core::reactor::{Handle};
 use tungstenite::{Message};
@@ -41,9 +43,9 @@ use uuid::{Uuid};
 pub type ActiveConnections = Rc<RefCell<HashMap<SocketAddr, mpsc::UnboundedSender<Message>>>>;
 
 /// Default AMQP exchange point for requests
-pub const REQUEST_EXCHANGE: &'static str = "open-matchmaking.direct";
+const REQUEST_EXCHANGE: &'static str = "open-matchmaking.direct";
 /// Default AMQP exchange point for responses
-pub const RESPONSE_EXCHANGE: &'static str = "open-matchmaking.responses.direct";
+const RESPONSE_EXCHANGE: &'static str = "open-matchmaking.responses.direct";
 
 
 /// Proxy engine for processing messages, handling errors and communicating with a message broker.
@@ -63,11 +65,16 @@ impl Engine {
     }
 
     /// Main handler for generating a response per each incoming request.
-    pub fn handle(&self, message: Box<JsonValue>, client: &SocketAddr, connections: &ActiveConnections, handle: &Handle) -> LapinFuture {
+    pub fn handle(&self, message: Box<JsonValue>, client: &SocketAddr, connections: &ActiveConnections, handle: &Handle) -> RabbitMQFuture {
+        let url = message["url"].as_str().unwrap();
         let queue_name = format!("{}", Uuid::new_v4());
-        let client_future = self.rabbitmq_client.clone().get_future(handle);
+        let event_name = message["event-name"].as_str().unwrap_or("null");
+        let endpoint = self.router.clone().match_url_or_default(url);
 
-        client_future
+        let request_headers = self.prepare_request_headers(message, endpoint);
+        let client_future = self.rabbitmq_client.borrow().get_future(handle);
+
+        Box::new(client_future
             // 1. Create a channel
             .and_then(|client| {
                 client.create_confirm_channel(ConfirmSelectOptions::default())
@@ -102,7 +109,7 @@ impl Engine {
                 channel.queue_bind(
                     &queue_name,
                     &RESPONSE_EXCHANGE,
-                    &matchmaking_endpoint,
+                    &endpoint.get_microservice(),
                     &QueueBindOptions::default(),
                     &FieldTable::new()
                 )
@@ -123,20 +130,24 @@ impl Engine {
                     ..Default::default()
                 };
 
-                // TODO: Take headers from JSON and set headers here?
-                // TODO: Copy token from JSON into header
+                let mut prepared_headers = FieldTable::new();
+                for &(key, value) in request_headers.iter() {
+                    prepared_headers.insert(key, AMQPValue::LongString(value));
+                }
+
                 let basic_properties = BasicProperties {
                     content_type: Some("application/json".to_string()),
-                    delivery_mode: Some(2),                    // Message must be persistent
-                    reply_to: Some(queue_name.to_string()),    // Response queue
-                    correlation_id: Some("event".to_string()), // Event name
+                    headers: Some(prepared_headers),              // Headers per each message
+                    delivery_mode: Some(2),                       // Message must be persistent
+                    reply_to: Some(queue_name.to_string()),       // Response queue
+                    correlation_id: Some(event_name.to_string()), // Event name
                     ..Default::default()
                 };
 
                 channel.basic_publish(
                     &REQUEST_EXCHANGE,
-                    &matchmaking_endpoint,
-                    b"test message",            // TODO: Extract JSON content and left it here
+                    &endpoint.get_microservice(),
+                    message["content"].dump().as_bytes(),
                     &publish_message_options,
                     basic_properties
                 )
@@ -160,9 +171,8 @@ impl Engine {
                         stream.take(1)
                               .into_future()
                               .map_err(|(err, _)| err)
-                              .map(move |(message, _)| (channel, message))
+                              .map(move |(message, _)| (channel, message.unwrap()))
                     })
-
             })
             .map_err(|err| {
                 let message = format!("Error during consuming the response message: {}", err);
@@ -171,16 +181,14 @@ impl Engine {
             })
 
             // 6. Prepare a response for a client, serialize and sent via WebSocket transmitter
-            // TODO: Apply serialization for response and send it to client
             .and_then(|(channel, message)| {
-                let message = message.unwrap();
-
-
-
-                channel.basic_ack(message.delivery_tag);
-                Ok(channel)
-//                channel.basic_ack(message.delivery_tag)
-//                    .map(move |_| channel)
+                let raw_data = from_utf8(&message.data).unwrap();
+                let json = Box::new(json_parse(raw_data).unwrap());
+                let response = self.prepare_response(json);
+                let transmitter = &connections.borrow_mut()[&client];
+                transmitter.unbounded_send(response).unwrap();
+                channel.basic_ack(message.delivery_tag)
+                    .map(move |_| channel)
             })
             .map_err(|err| {
                 let message = format!("Error during sending a message to the client: {}", err);
@@ -189,12 +197,12 @@ impl Engine {
             })
 
             // 7. Unbind the response queue from the exchange point
-            // TODO: Uncomment this code when my PR for queue_bind will be merged
+            // TODO: Uncomment this code when my PR for queue_unbind will be merged
             //.and_then(|channel| {
             //    channel.queue_unbind(
             //        &queue_name,
             //        &response_exchange_name,
-            //        &matchmaking_endpoint,
+            //        &endpoint.get_microservice(),
             //        &QueueUnbindOptions::default(),
             //        &FieldTable::new()
             //    )
@@ -203,7 +211,7 @@ impl Engine {
             //.map_err(|err| {
             //    let message = format!("Error during linking the response queue with exchange: {}", err);
             //    error!("{}", message);
-            //    err
+            //    Err(PathfinderError::Io(err))
             //})
 
             // 8. Delete the response queue
@@ -233,12 +241,13 @@ impl Engine {
                 err
             })
 
-        //let transmitter = &connections.borrow_mut()[&client];
-        //let request = self.prepare_request(message);
-
-        //println!("{}", request);
-        //let response = self.prepare_response(request);
-        //transmitter.unbounded_send(response).unwrap();
+            .then(|result| {
+                match result {
+                    Ok(_) => Ok(()),
+                    Err(err) => Err(PathfinderError::Io(err))
+                }
+            })
+        )
     }
 
     /// Transforms an error (which is a string) into JSON object in the special format.
@@ -260,44 +269,18 @@ impl Engine {
         serializer.deserialize(message)
     }
 
-    /// Converts a JSON object into a message for a message broker.
-    fn prepare_request(&self, json: Box<JsonValue>) -> Box<JsonValue> {
-        let mut request = Box::new(object!{
-            "headers" => object!{},
-            "content" => object!{}
-        });
-
-        self.generate_request_headers(&mut request, json);
-        request
+    /// Prepares a list of key-value pairs for headers in message.
+    fn prepare_request_headers(&self, json: Box<JsonValue>, endpoint: Box<Endpoint>) -> Box<Vec<(String, String)>> {
+        Box::new(vec![
+            (String::from("Microservice-Name"), endpoint.get_microservice()),
+            (String::from("Request-URI"), endpoint.get_url()),
+            (String::from("Event-Name"), json["event-name"].as_str().unwrap_or("null").to_string()),
+            (String::from("Token"), json["token"].as_str().unwrap_or("null").to_string())
+        ])
     }
 
     /// Converts a JSON object into the `tungstenite::Message` message.
     fn prepare_response(&self, json: Box<JsonValue>) -> Message {
         self.serialize_message(json)
-    }
-
-    /// Transforms a request to the appropriate format for a further processing by a microservice.
-    fn generate_request_headers(&self, request: &mut Box<JsonValue>, from_json: Box<JsonValue>) {
-        request["headers"]["request-id"] = format!("{}", Uuid::new_v4()).into();
-
-        let url = from_json["url"].as_str().unwrap();
-        match self.router.match_url(url) {
-            Ok(endpoint) => {
-                request["headers"]["microservice-name"] = endpoint.get_microservice().into();
-                request["headers"]["request-url"] = endpoint.get_url().into();
-            },
-            Err(_) => {
-                request["headers"]["microservice-name"] = self.convert_url_into_microservice(url).into();
-                request["headers"]["request-url"] = url.into();
-            }
-        }
-    }
-
-    /// Converts a URL to the certain microservice name, so that it will be used as a queue/topic name futher.
-    fn convert_url_into_microservice(&self, url: &str) -> String {
-        let mut external_url = url.clone();
-        external_url = external_url.trim_left_matches("/");
-        external_url = external_url.trim_right_matches("/");
-        external_url.replace("/", ".")
     }
 }

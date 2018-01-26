@@ -2,4 +2,4 @@
 //!
 pub mod client;
 
-pub use self::client::{RabbitMQClient, LapinFuture};
+pub use self::client::{RabbitMQClient, LapinFuture, RabbitMQFuture};
