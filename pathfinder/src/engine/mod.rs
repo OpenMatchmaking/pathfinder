@@ -174,6 +174,9 @@ impl Engine {
             // TODO: Apply serialization for response and send it to client
             .and_then(|(channel, message)| {
                 let message = message.unwrap();
+
+
+
                 channel.basic_ack(message.delivery_tag);
                 Ok(channel)
 //                channel.basic_ack(message.delivery_tag)

@@ -101,19 +101,22 @@ impl Proxy {
                         // 2. Apply a middleware to each incoming message
                         let auth_future = auth_middleware_local.borrow()
                             .process_request(&json_message, &handle_inner)
-                            .then(move |result| {
-                                if result.is_err() {
-                                    handle_error!(&connections_nested, &addr, engine_nested, result.unwrap_err());
-                                };
-                                Ok(())
-                            });
+                            .map_err(move |err| {
+                                handle_error!(&connections_nested, &addr, engine_nested, result.unwrap_err());
+                            })
+                            .map(move |_| ());
 
                         // 3. Put request into a queue in RabbitMQ and receive the response
-                        let _rabbitmq_future = engine_local.borrow_mut().handle(
+                        let rabbitmq_future = engine_local.borrow_mut().handle(
                             json_message, &addr, &connections_inner, &handle_inner
-                        );
+                        )
+                            .map_err(move |err| {
+                                handle_error!(&connections_nested, &addr, engine_nested, result.unwrap_err());
+                            })
+                            .map(move |_| ());
 
-                        handle_inner.spawn(auth_future);
+                        let processing_request_future = auth_future.and_then(rabbitmq_future);
+                        handle_inner.spawn(processing_request_future);
                         Ok(())
                     });
 
