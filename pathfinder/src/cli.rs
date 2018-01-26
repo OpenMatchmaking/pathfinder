@@ -5,8 +5,6 @@
 
 extern crate clap;
 
-use structopt::StructOpt;
-
 /// A structure that defines available arguments and options for CLI
 #[derive(StructOpt, Debug)]
 #[structopt(name = "Pathfinder",
