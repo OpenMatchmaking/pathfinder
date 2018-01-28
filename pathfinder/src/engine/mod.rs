@@ -5,21 +5,17 @@
 //! broker and preparing appropriate responses in the certain format.
 //!
 
-#[macro_use]
-pub mod engine_macro;
 pub mod rabbitmq;
 pub mod router;
 pub mod serializer;
 
 use std::cell::{RefCell};
-use std::collections::{HashMap};
-use std::net::{SocketAddr};
 use std::rc::{Rc};
 use std::str::{from_utf8};
 use std::vec::Vec;
 
 pub use self::router::{Router, Endpoint, extract_endpoints};
-pub use self::serializer::{Serializer};
+pub use self::serializer::{Serializer, JsonMessage};
 pub use self::rabbitmq::{RabbitMQClient, RabbitMQFuture};
 
 use super::cli::{CliOptions};
@@ -33,14 +29,10 @@ use lapin_futures_rustls::lapin::types::{AMQPValue, FieldTable};
 use lapin_futures_rustls::lapin::channel::{ConfirmSelectOptions};
 use lapin_futures_rustls::lapin::channel::{BasicPublishOptions, BasicProperties, BasicConsumeOptions};
 use lapin_futures_rustls::lapin::channel::{QueueDeclareOptions, QueueDeleteOptions, QueueBindOptions};
-use json::{JsonValue};
 use tokio_core::reactor::{Handle};
 use tungstenite::{Message};
 use uuid::{Uuid};
 
-
-/// Type alias for dictionary with `SocketAddr` as a key and `UnboundedSender<Message>` as a value.
-pub type ActiveConnections = Rc<RefCell<HashMap<SocketAddr, mpsc::UnboundedSender<Message>>>>;
 
 /// Default AMQP exchange point for requests
 const REQUEST_EXCHANGE: &'static str = "open-matchmaking.direct";
@@ -65,18 +57,26 @@ impl Engine {
     }
 
     /// Main handler for generating a response per each incoming request.
-    pub fn handle(&self, message: Box<JsonValue>, client: &SocketAddr, connections: &ActiveConnections, handle: &Handle) -> RabbitMQFuture {
-        let url = message["url"].as_str().unwrap();
-        let queue_name = format!("{}", Uuid::new_v4());
-        let event_name = message["event-name"].as_str().unwrap_or("null");
-        let endpoint = self.router.clone().match_url_or_default(url);
+    pub fn handle(&self, message: JsonMessage, transmitter: mpsc::UnboundedSender<Message>, handle: &Handle) -> RabbitMQFuture {
+        let message_nested = message.clone();
+        let url = message_nested["url"].as_str().unwrap();
 
-        let request_headers = self.prepare_request_headers(message, endpoint);
+        let endpoint = self.router.clone().match_url_or_default(&url);
+        let endpoint_link = endpoint.clone();
+        let endpoint_publish = endpoint.clone();
+
+        let queue_name = Rc::new(format!("{}", Uuid::new_v4()));
+        let queue_name_bind = queue_name.clone();
+        let queue_name_response = queue_name.clone();
+        let queue_name_consumer = queue_name.clone();
+        let queue_name_delete = queue_name.clone();
+
+        let request_headers = self.prepare_request_headers(&message_nested, endpoint.clone());
         let client_future = self.rabbitmq_client.borrow().get_future(handle);
 
         Box::new(client_future
             // 1. Create a channel
-            .and_then(|client| {
+            .and_then(move |client| {
                 client.create_confirm_channel(ConfirmSelectOptions::default())
             })
             .map_err(|err| {
@@ -86,7 +86,7 @@ impl Engine {
             })
 
             // 2. Declare a response queue
-            .and_then(|channel| {
+            .and_then(move |channel| {
                 let queue_declare_options = QueueDeclareOptions {
                     passive: false,
                     durable: true,
@@ -105,11 +105,11 @@ impl Engine {
             })
 
             // 3. Link the response queue the exchange
-            .and_then(|channel| {
+            .and_then(move |channel| {
                 channel.queue_bind(
-                    &queue_name,
+                    &queue_name_bind,
                     &RESPONSE_EXCHANGE,
-                    &endpoint.get_microservice(),
+                    &endpoint_link.get_microservice(),
                     &QueueBindOptions::default(),
                     &FieldTable::new()
                 )
@@ -121,32 +121,35 @@ impl Engine {
                 err
             })
 
-            // 4. Publish message into the microservice queue and make ensure that it's delivered
-            // TODO: Make ensure that for testing endpoint and exchange are defined via RabbitMQ Management plugin
-            .and_then(|channel| {
+             // 4. Publish message into the microservice queue and make ensure that it's delivered
+            .and_then(move |channel| {
                 let publish_message_options = BasicPublishOptions {
                     mandatory: true,
                     immediate: false,
                     ..Default::default()
                 };
 
-                let mut prepared_headers = FieldTable::new();
-                for &(key, value) in request_headers.iter() {
-                    prepared_headers.insert(key, AMQPValue::LongString(value));
+                let mut message_headers = FieldTable::new();
+                for &(ref key, ref value) in request_headers.clone().iter() {
+                    let header_name = key.to_string();
+                    let header_value = AMQPValue::LongString(value.to_string());
+                    message_headers.insert(header_name, header_value);
                 }
+
+                let event_name = message["event-name"].as_str().unwrap_or("null");
 
                 let basic_properties = BasicProperties {
                     content_type: Some("application/json".to_string()),
-                    headers: Some(prepared_headers),              // Headers per each message
-                    delivery_mode: Some(2),                       // Message must be persistent
-                    reply_to: Some(queue_name.to_string()),       // Response queue
-                    correlation_id: Some(event_name.to_string()), // Event name
+                    headers: Some(message_headers),                       // Headers for the message
+                    delivery_mode: Some(2),                               // Message must be persistent
+                    reply_to: Some(queue_name_response.to_string()),      // Response queue
+                    correlation_id: Some(event_name.clone().to_string()), // Event name
                     ..Default::default()
                 };
 
                 channel.basic_publish(
                     &REQUEST_EXCHANGE,
-                    &endpoint.get_microservice(),
+                    &endpoint_publish.get_microservice(),
                     message["content"].dump().as_bytes(),
                     &publish_message_options,
                     basic_properties
@@ -160,9 +163,9 @@ impl Engine {
             })
 
             // 5. Consume a response message from the queue, that was declared on the 2nd step
-            .and_then(|channel| {
+            .and_then(move |channel| {
                 channel.basic_consume(
-                    &queue_name,
+                    &queue_name_consumer,
                     "response_consumer",
                     &BasicConsumeOptions::default(),
                     &FieldTable::new()
@@ -181,11 +184,11 @@ impl Engine {
             })
 
             // 6. Prepare a response for a client, serialize and sent via WebSocket transmitter
-            .and_then(|(channel, message)| {
+            .and_then(move |(channel, message)| {
                 let raw_data = from_utf8(&message.data).unwrap();
-                let json = Box::new(json_parse(raw_data).unwrap());
-                let response = self.prepare_response(json);
-                let transmitter = &connections.borrow_mut()[&client];
+                let json = Rc::new(Box::new(json_parse(raw_data).unwrap()));
+                let serializer = Serializer::new();
+                let response = serializer.serialize(json.dump()).unwrap();
                 transmitter.unbounded_send(response).unwrap();
                 channel.basic_ack(message.delivery_tag)
                     .map(move |_| channel)
@@ -198,11 +201,11 @@ impl Engine {
 
             // 7. Unbind the response queue from the exchange point
             // TODO: Uncomment this code when my PR for queue_unbind will be merged
-            //.and_then(|channel| {
+            //.and_then(move |channel| {
             //    channel.queue_unbind(
-            //        &queue_name,
+            //        &queue_name_unbind,
             //        &response_exchange_name,
-            //        &endpoint.get_microservice(),
+            //        &endpoint_unbind.get_microservice(),
             //        &QueueUnbindOptions::default(),
             //        &FieldTable::new()
             //    )
@@ -215,14 +218,14 @@ impl Engine {
             //})
 
             // 8. Delete the response queue
-            .and_then(|channel| {
+            .and_then(move |channel| {
                 let queue_delete_options = QueueDeleteOptions {
                     if_unused: false,
                     if_empty: false,
                     ..Default::default()
                 };
 
-                channel.queue_delete(&queue_name, &queue_delete_options)
+                channel.queue_delete(&queue_name_delete, &queue_delete_options)
                     .map(|_| channel)
             })
             .map_err(|err| {
@@ -232,7 +235,7 @@ impl Engine {
             })
 
             // 9. Close the channel
-            .and_then(|channel| {
+            .and_then(move |channel| {
                 channel.close(200, "Close the channel.")
             })
             .map_err(|err| {
@@ -241,7 +244,7 @@ impl Engine {
                 err
             })
 
-            .then(|result| {
+            .then(move |result| {
                 match result {
                     Ok(_) => Ok(()),
                     Err(err) => Err(PathfinderError::Io(err))
@@ -258,29 +261,24 @@ impl Engine {
     }
 
     /// Serialize a JSON object into message.
-    pub fn serialize_message(&self, json: Box<JsonValue>) -> Message {
+    pub fn serialize_message(&self, json: JsonMessage) -> Message {
         let serializer = Serializer::new();
         serializer.serialize(json.dump()).unwrap()
     }
 
     /// Deserialize a message into JSON object.
-    pub fn deserialize_message(&self, message: &Message) -> Result<Box<JsonValue>> {
+    pub fn deserialize_message(&self, message: &Message) -> Result<JsonMessage> {
         let serializer = Serializer::new();
         serializer.deserialize(message)
     }
 
     /// Prepares a list of key-value pairs for headers in message.
-    fn prepare_request_headers(&self, json: Box<JsonValue>, endpoint: Box<Endpoint>) -> Box<Vec<(String, String)>> {
+    fn prepare_request_headers(&self, json: &JsonMessage, endpoint: Rc<Box<Endpoint>>) -> Box<Vec<(String, String)>> {
         Box::new(vec![
             (String::from("Microservice-Name"), endpoint.get_microservice()),
             (String::from("Request-URI"), endpoint.get_url()),
             (String::from("Event-Name"), json["event-name"].as_str().unwrap_or("null").to_string()),
             (String::from("Token"), json["token"].as_str().unwrap_or("null").to_string())
         ])
-    }
-
-    /// Converts a JSON object into the `tungstenite::Message` message.
-    fn prepare_response(&self, json: Box<JsonValue>) -> Message {
-        self.serialize_message(json)
     }
 }

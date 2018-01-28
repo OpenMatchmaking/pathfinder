@@ -23,7 +23,6 @@ use cli::{CliOptions};
 use futures::sync::{mpsc};
 use futures::{Future, Sink};
 use futures::stream::{Stream, SplitSink};
-use json::{JsonValue};
 use tokio_core::net::{TcpListener, TcpStream};
 use tokio_core::reactor::{Core};
 use tokio_tungstenite::{accept_async};
@@ -86,31 +85,38 @@ impl Proxy {
                     let ws_reader = stream.for_each(move |message: Message| {
 
                         // Get references to required components
+                        let addr_nested = addr.clone();
                         let engine_nested = engine_local.clone();
                         let connections_nested = connections_inner.clone();
+                        let transmitter_nested = &connections_nested.borrow_mut()[&addr_nested];
+                        let transmitter_nested2 = transmitter_nested.clone();
 
                         // 1. Deserialize message into JSON
                         let json_message = match engine_local.borrow().deserialize_message(&message) {
                             Ok(json_message) => json_message,
                             Err(err) => {
-                                handle_error!(&connections_inner, &addr, engine_local, err);
-                                Box::new(JsonValue::new_object())
+                                let formatted_error = format!("{}", err);
+                                let error_message = engine_nested.borrow().wrap_an_error(formatted_error.as_str());
+                                transmitter_nested.unbounded_send(error_message).unwrap();
+                                return Ok(())
                             }
                         };
 
                         // 2. Apply a middleware to each incoming message
                         let auth_future = auth_middleware_local.borrow()
-                            .process_request(&json_message, &handle_inner);
+                            .process_request(json_message.clone(), &handle_inner);
 
                         // 3. Put request into a queue in RabbitMQ and receive the response
-                        let rabbitmq_future = engine_local.borrow_mut().handle(
-                            json_message, &addr, &connections_inner, &handle_inner
+                        let rabbitmq_future = engine_local.borrow().handle(
+                            json_message.clone(), transmitter_nested.clone(), &handle_inner
                         );
 
                         let processing_request_future = auth_future
                             .and_then(move |_| rabbitmq_future)
-                            .map_err(|err| {
-                                handle_error!(&connections_nested, &addr, engine_nested, err);
+                            .map_err(move |err| {
+                                let formatted_error = format!("{}", err);
+                                let error_message = engine_nested.borrow().wrap_an_error(formatted_error.as_str());
+                                transmitter_nested2.unbounded_send(error_message).unwrap();
                                 ()
                             });
 

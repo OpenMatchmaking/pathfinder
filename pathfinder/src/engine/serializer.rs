@@ -5,11 +5,16 @@
 //! for client before sending through transmitters.
 //!
 
+use std::rc::{Rc};
+
 use super::super::error::{Result, PathfinderError};
 
 use json::{parse as parse_json, JsonValue};
 use tungstenite::{Message};
 
+
+/// Type alias for JSON object
+pub type JsonMessage = Rc<Box<JsonValue>>;
 
 /// A specialized struct for deserializing incoming messages into JSON and
 /// serializing responses into `tungstenite::Message` objects, so, that they
@@ -58,7 +63,7 @@ impl Serializer {
     }
 
     /// Transforms an instance of the `tungstenite::Message` type into JSON object.
-    pub fn deserialize(&self, message: &Message) -> Result<Box<JsonValue>> {
+    pub fn deserialize(&self, message: &Message) -> Result<JsonMessage> {
          let text_message = self.parse_into_text(message)?;
          let mut json_message = self.parse_into_json(text_message.as_str())?;
          json_message = self.validate_json(json_message)?;
@@ -78,9 +83,9 @@ impl Serializer {
     }
 
     /// Parses a UTF-8 string and converts it into JSON object.
-    fn parse_into_json(&self, message: &str) -> Result<Box<JsonValue>> {
+    fn parse_into_json(&self, message: &str) -> Result<JsonMessage> {
         match parse_json(message) {
-            Ok(message) => Ok(Box::new(message)),
+            Ok(message) => Ok(Rc::new(Box::new(message))),
             Err(err) => {
                 let formatted_message = format!("{}", err);
                 return Err(PathfinderError::DecodingError(formatted_message))
@@ -89,7 +94,7 @@ impl Serializer {
     }
 
     /// Validates a JSON object on required fields and values.
-    fn validate_json(&self, json: Box<JsonValue>) -> Result<Box<JsonValue>> {
+    fn validate_json(&self, json: JsonMessage) -> Result<JsonMessage> {
         if json["url"].is_null() {
             let error_message = String::from("Key `url` is missing or value is `null`");
             return Err(PathfinderError::DecodingError(error_message));

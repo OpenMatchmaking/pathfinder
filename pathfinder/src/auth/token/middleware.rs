@@ -3,7 +3,8 @@
 
 use super::super::super::error::{PathfinderError};
 use auth::token::jwt::{DEFAULT_ISSUER, validate};
-use auth::middleware::{JsonMessage, Middleware, MiddlewareFuture};
+use auth::middleware::{Middleware, MiddlewareFuture};
+use auth::{JsonMessage};
 
 use cli::{CliOptions};
 use futures::{Future};
@@ -55,7 +56,7 @@ impl JwtTokenMiddleware {
 
 
 impl Middleware for JwtTokenMiddleware {
-    fn process_request(&self, message: &JsonMessage, handle: &Handle) -> MiddlewareFuture {
+    fn process_request(&self, message: JsonMessage, handle: &Handle) -> MiddlewareFuture {
         // Extract a token from a JSON object
         let token = match message["token"].as_str() {
             Some(token) => String::from(token),
