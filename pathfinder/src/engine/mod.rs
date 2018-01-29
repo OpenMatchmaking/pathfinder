@@ -80,7 +80,7 @@ impl Engine {
                 client.create_confirm_channel(ConfirmSelectOptions::default())
             })
             .map_err(|err| {
-                let message = format!("Error during creating a channel: {}", err);
+                let message = format!("Error during creating a channel. Reason -> {}", err);
                 error!("{}", message);
                 err
             })
@@ -99,7 +99,7 @@ impl Engine {
                     .map(|_| channel)
             })
             .map_err(|err| {
-                let message = format!("Error during declaring the queue: {}", err);
+                let message = format!("Error during declaring the queue. Reason -> {}", err);
                 error!("{}", message);
                 err
             })
@@ -116,7 +116,7 @@ impl Engine {
                     .map(|_| channel)
             })
             .map_err(|err| {
-                let message = format!("Error during linking the response queue with exchange: {}", err);
+                let message = format!("Error during linking the response queue with exchange. Reason -> {}", err);
                 error!("{}", message);
                 err
             })
@@ -157,7 +157,7 @@ impl Engine {
                     .map(|_confirmation| channel)
             })
             .map_err(|err| {
-                let message = format!("Error during publishing a message: {}", err);
+                let message = format!("Error during publishing a message. Reason -> {}", err);
                 error!("{}", message);
                 err
             })
@@ -178,7 +178,7 @@ impl Engine {
                     })
             })
             .map_err(|err| {
-                let message = format!("Error during consuming the response message: {}", err);
+                let message = format!("Error during consuming the response message. Reason -> {}", err);
                 error!("{}", message);
                 err
             })
@@ -194,7 +194,7 @@ impl Engine {
                     .map(move |_| channel)
             })
             .map_err(|err| {
-                let message = format!("Error during sending a message to the client: {}", err);
+                let message = format!("Error during sending a message to the client. Reason -> {}", err);
                 error!("{}", message);
                 err
             })
@@ -229,7 +229,7 @@ impl Engine {
                     .map(|_| channel)
             })
             .map_err(|err| {
-                let message = format!("Error during deleting the queue: {}", err);
+                let message = format!("Error during deleting the queue. Reason -> {}", err);
                 error!("{}", message);
                 err
             })
@@ -239,7 +239,7 @@ impl Engine {
                 channel.close(200, "Close the channel.")
             })
             .map_err(|err| {
-                let message = format!("Error during closing the channel: {}", err);
+                let message = format!("Error during closing the channel. Reason -> {}", err);
                 error!("{}", message);
                 err
             })
@@ -247,7 +247,9 @@ impl Engine {
             .then(move |result| {
                 match result {
                     Ok(_) => Ok(()),
-                    Err(err) => Err(PathfinderError::Io(err))
+                    Err(_) => Err(PathfinderError::MessageBrokerError(
+                        String::from("The request wasn't processed. Please, try once again.")
+                    ))
                 }
             })
         )

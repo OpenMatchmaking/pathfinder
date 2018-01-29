@@ -39,7 +39,9 @@ pub enum PathfinderError {
     /// converting into JSON).
     DecodingError(String),
     /// The error that occurred when token isn't specified or invalid.
-    AuthenticationError(String)
+    AuthenticationError(String),
+    /// The error that occurred with a message broker
+    MessageBrokerError(String)
 }
 
 
@@ -52,6 +54,7 @@ impl fmt::Display for PathfinderError {
             PathfinderError::EndpointNotFound(ref msg) => write!(f, "Endpoint \"{}\" was not found", msg),
             PathfinderError::DecodingError(ref msg) => write!(f, "Decoding error: {}", msg),
             PathfinderError::AuthenticationError(ref msg) => write!(f, "Authentication error: {}", msg),
+            PathfinderError::MessageBrokerError(ref msg) => write!(f, "{}", msg),
         }
     }
 }
