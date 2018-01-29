@@ -4,7 +4,10 @@
 extern crate config;
 
 use std::collections::{HashMap, HashSet};
-use error::PathfinderError;
+use std::rc::{Rc};
+
+use error::{PathfinderError};
+
 use self::config::{Config, Value};
 
 /// A struct which stores an original URL that must be converted to the
@@ -58,7 +61,7 @@ fn get_value_from_config_as_str(conf: &HashMap<String, Value>, key: &str) -> Str
 
 /// Returns a HashMap with mapping for URL onto certain queue/topic name that
 /// were extracted from a configuration.
-pub fn extract_endpoints(conf: Box<Config>) -> HashMap<String, Box<Endpoint>> {
+pub fn extract_endpoints(conf: Box<Config>) -> HashMap<String, Rc<Box<Endpoint>>> {
     let mut endpoints = HashMap::new();
 
     let config_endpoints: Vec<Value> = match conf.get_array("endpoints") {
@@ -101,7 +104,7 @@ pub fn extract_endpoints(conf: Box<Config>) -> HashMap<String, Box<Endpoint>> {
 
         let url = get_value_from_config_as_str(&configuration, "url");
         let microservice = get_value_from_config_as_str(&configuration, "microservice");
-        let endpoint = Box::new(Endpoint::new(&url, &microservice));
+        let endpoint = Rc::new(Box::new(Endpoint::new(&url, &microservice)));
         endpoints.insert(url, endpoint);
     }
 

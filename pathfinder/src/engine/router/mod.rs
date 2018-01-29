@@ -10,6 +10,7 @@ pub use self::endpoint::{Endpoint, extract_endpoints};
 
 use std::collections::{HashMap};
 use std::clone::{Clone};
+use std::rc::{Rc};
 
 use super::super::error::{Result, PathfinderError};
 
@@ -51,24 +52,46 @@ use super::super::error::{Result, PathfinderError};
 /// ```
 ///
 pub struct Router {
-    endpoints: HashMap<String, Box<Endpoint>>
+    endpoints: HashMap<String, Rc<Box<Endpoint>>>
 }
 
 
 impl Router {
     /// Returns a new instance of `Router` that contains a mapping for resources.
-    pub fn new(endpoints: HashMap<String, Box<Endpoint>>) -> Router {
+    pub fn new(endpoints: HashMap<String, Rc<Box<Endpoint>>>) -> Router {
         Router {
             endpoints: endpoints
         }
     }
 
     /// Returns an endpoint that was found for a passed URL.
-    pub fn match_url(&self, url: &str) -> Result<Box<Endpoint>> {
+    pub fn match_url(&self, url: &str) -> Result<Rc<Box<Endpoint>>> {
         match self.endpoints.contains_key(url) {
             true => Ok(self.endpoints[url].clone()),
             false => Err(PathfinderError::EndpointNotFound(url.to_string()))
         }
+    }
+
+    /// Returns an endpoint for the matched URL. If wasn't found returns a processed
+    /// URL as endpoint like in normal cases.
+    pub fn match_url_or_default(&self, url: &str) -> Rc<Box<Endpoint>> {
+        match self.match_url(url) {
+            Ok(endpoint) => endpoint,
+            Err(_) => {
+                let url = url.to_string();
+                let microservice = self.convert_url_into_microservice(&url);
+                Rc::new(Box::new(Endpoint::new(&url, &microservice)))
+            }
+        }
+    }
+
+    /// Converts a URL to the certain microservice name, so that it will be used as a
+    /// queue/topic name further.
+    fn convert_url_into_microservice(&self, url: &str) -> String {
+        let mut external_url = url.clone();
+        external_url = external_url.trim_left_matches("/");
+        external_url = external_url.trim_right_matches("/");
+        external_url.replace("/", ".")
     }
 }
 

@@ -1,12 +1,10 @@
 //! Middleware implementations with token support
 //!
 
-extern crate log;
-
 use super::super::super::error::{PathfinderError};
 use auth::token::jwt::{DEFAULT_ISSUER, validate};
-use auth::middleware::{JsonMessage, Middleware, MiddlewareFuture};
-
+use auth::middleware::{Middleware, MiddlewareFuture};
+use auth::{JsonMessage};
 
 use cli::{CliOptions};
 use futures::{Future};
@@ -36,7 +34,7 @@ impl JwtTokenMiddleware {
 
         JwtTokenMiddleware {
             jwt_secret: cli.jwt_secret_key.clone(),
-            redis_address: format!("{}:{}", cli.redis_ip, cli.redis_port),
+            redis_address: format!("{}:{}", cli.redis_host, cli.redis_port),
             redis_password: redis_password
         }
     }
@@ -58,7 +56,7 @@ impl JwtTokenMiddleware {
 
 
 impl Middleware for JwtTokenMiddleware {
-    fn process_request(&self, message: &JsonMessage, handle: &Handle) -> MiddlewareFuture {
+    fn process_request(&self, message: JsonMessage, handle: &Handle) -> MiddlewareFuture {
         // Extract a token from a JSON object
         let token = match message["token"].as_str() {
             Some(token) => String::from(token),

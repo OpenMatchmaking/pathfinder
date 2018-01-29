@@ -2,11 +2,14 @@
 //!
 
 extern crate chrono;
+extern crate clap;
 extern crate futures;
 extern crate fern;
 #[macro_use]
 extern crate json;
 extern crate jsonwebtoken;
+extern crate lapin_futures_rustls;
+extern crate lapin_futures_tls_api;
 #[macro_use]
 extern crate log;
 extern crate tokio_core;
@@ -50,9 +53,9 @@ fn main() {
     let config = get_config(&cli.config);
     let endpoints = extract_endpoints(config);
     let router = Box::new(Router::new(endpoints));
-    let engine = Box::new(Engine::new(router));
+    let engine = Box::new(Engine::new(&cli, router));
 
-    let proxy = Box::new(Proxy::new(engine, &cli));
+    let proxy = Box::new(Proxy::new(&cli, engine));
     let address = format!("{}:{}", cli.ip, cli.port).parse().unwrap();
     proxy.run(address);
 }

@@ -1,6 +1,27 @@
-version: "3"
+version: "2"
+
+networks:
+  app-tier:
+    driver: bridge
 
 services:
+
+  app:
+    build:
+      context: .
+      dockerfile: ./Dockerfile_pathfinder
+    volumes:
+      - ./:/code/
+    ports:
+      - "8080:8080"
+    tty: true
+    depends_on:
+      - rabbitmq
+    links:
+      - rabbitmq
+    networks:
+      - app-tier
+
   redis:
     image: "bitnami/redis:latest"
     environment:
@@ -16,3 +37,15 @@ services:
       - redis:redis
     ports:
       - "8081:8081"
+
+  rabbitmq:
+    image: bitnami/rabbitmq:latest
+    ports:
+      - 5672:5672
+      - 15672:15672
+    environment:
+      - RABBITMQ_USERNAME=user
+      - RABBITMQ_PASSWORD=password
+      - RABBITMQ_VHOST=vhost
+    networks:
+      - app-tier
