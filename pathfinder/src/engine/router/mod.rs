@@ -145,8 +145,7 @@ mod tests {
     }
 
     #[test]
-    fn test_router_match_url_or_default_returns_an_existing_endpoint_for_a_matched_url()
-    {
+    fn test_router_match_url_or_default_returns_an_existing_endpoint_for_a_matched_url() {
         let router = get_router(&"./tests/files/config_with_valid_endpoints.yaml");
         let endpoint = router.match_url_or_default(&"/api/matchmaking/search");
 
@@ -155,8 +154,7 @@ mod tests {
     }
 
     #[test]
-    fn test_router_returns_a_default_match_return_a_custom_endpoint_for_an_unknown_url()
-    {
+    fn test_router_returns_a_default_match_return_a_custom_endpoint_for_an_unknown_url() {
         let router = get_router(&"./tests/files/config_with_valid_endpoints.yaml");
         let endpoint = router.match_url_or_default(&"/api/matchmaking/unknown");
 
@@ -164,5 +162,16 @@ mod tests {
         assert_eq!(endpoint.get_microservice(), "api.matchmaking.unknown");
         assert_eq!(endpoint.get_request_exchange(), REQUEST_EXCHANGE);
         assert_eq!(endpoint.get_response_exchange(), RESPONSE_EXCHANGE);
+    }
+
+    #[test]
+    fn test_router_returns_a_custom_endpont_for_a_match() {
+        let router = get_router(&"./tests/files/config_with_custom_url_mapping.yaml");
+        let endpoint = router.match_url_or_default(&"/api/matchmaking/leaderboard");
+
+        assert_eq!(endpoint.get_url(), "/api/matchmaking/leaderboard");
+        assert_eq!(endpoint.get_microservice(), "microservice.leaderboard");
+        assert_eq!(endpoint.get_request_exchange(), "amqp.direct");
+        assert_eq!(endpoint.get_response_exchange(), "open-matchmaking.default");
     }
 }
