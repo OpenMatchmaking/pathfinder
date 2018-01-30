@@ -179,7 +179,9 @@ mod tests {
     fn test_get_url() {
         let url = "/api/matchmaking/test";
         let microservice_name = "api.matchmaking.test";
-        let endpoint = Endpoint::new(url, microservice_name);
+        let request_exchange = "open-matchmaking.direct";
+        let respone_exchange = "open-matchmaking.responses.direct";
+        let endpoint = Endpoint::new(url, microservice_name, request_exchange, respone_exchange);
 
         assert_eq!(endpoint.get_url(), url);
     }
@@ -188,8 +190,32 @@ mod tests {
     fn test_get_microservice_name() {
         let url = "/api/matchmaking/test";
         let microservice_name = "api.matchmaking.test";
-        let endpoint = Endpoint::new(url, microservice_name);
+        let request_exchange = "open-matchmaking.direct";
+        let respone_exchange = "open-matchmaking.responses.direct";
+        let endpoint = Endpoint::new(url, microservice_name, request_exchange, respone_exchange);
 
         assert_eq!(endpoint.get_microservice(), microservice_name);
+    }
+
+    #[test]
+    fn test_get_request_exchange() {
+        let url = "/api/matchmaking/test";
+        let microservice_name = "api.matchmaking.test";
+        let request_exchange = "open-matchmaking.direct";
+        let respone_exchange = "open-matchmaking.responses.direct";
+        let endpoint = Endpoint::new(url, microservice_name, request_exchange, respone_exchange);
+
+        assert_eq!(endpoint.get_request_exchange(), request_exchange);
+    }
+
+    #[test]
+    fn test_get_response_exchange() {
+        let url = "/api/matchmaking/test";
+        let microservice_name = "api.matchmaking.test";
+        let request_exchange = "open-matchmaking.direct";
+        let respone_exchange = "open-matchmaking.responses.direct";
+        let endpoint = Endpoint::new(url, microservice_name, request_exchange, respone_exchange);
+
+        assert_eq!(endpoint.get_response_exchange(), respone_exchange);
     }
 }
