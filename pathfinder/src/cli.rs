@@ -14,7 +14,7 @@ extern crate clap;
 pub struct CliOptions {
     #[structopt(short = "s",
                 long = "secured",
-                help = "Enable creating a SSL connection RabbitMQ")]
+                help = "Enable the SSL/TLS mode for connections with RabbitMQ")]
     pub rabbitmq_secured: bool,
 
     #[structopt(short = "v",
