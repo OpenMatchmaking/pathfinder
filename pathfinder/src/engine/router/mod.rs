@@ -117,7 +117,7 @@ impl Router {
 #[cfg(test)]
 mod tests {
     use config::{get_config};
-    use engine::router::{Router, extract_endpoints};
+    use engine::router::{Router, extract_endpoints, REQUEST_EXCHANGE, RESPONSE_EXCHANGE};
 
     fn get_router(file_path: &str) -> Box<Router> {
         let config = get_config(file_path);
@@ -162,5 +162,7 @@ mod tests {
 
         assert_eq!(endpoint.get_url(), "/api/matchmaking/unknown");
         assert_eq!(endpoint.get_microservice(), "api.matchmaking.unknown");
+        assert_eq!(endpoint.get_request_exchange(), REQUEST_EXCHANGE);
+        assert_eq!(endpoint.get_response_exchange(), RESPONSE_EXCHANGE);
     }
 }
