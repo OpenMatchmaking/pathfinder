@@ -34,12 +34,6 @@ use tungstenite::{Message};
 use uuid::{Uuid};
 
 
-/// Default AMQP exchange point for requests
-const REQUEST_EXCHANGE: &'static str = "open-matchmaking.direct";
-/// Default AMQP exchange point for responses
-const RESPONSE_EXCHANGE: &'static str = "open-matchmaking.responses.direct";
-
-
 /// Proxy engine for processing messages, handling errors and communicating with a message broker.
 pub struct Engine {
     router: Rc<Box<Router>>,
@@ -108,7 +102,7 @@ impl Engine {
             .and_then(move |channel| {
                 channel.queue_bind(
                     &queue_name_bind,
-                    &RESPONSE_EXCHANGE,
+                    &endpoint_link.get_response_exchange(),
                     &endpoint_link.get_microservice(),
                     &QueueBindOptions::default(),
                     &FieldTable::new()
@@ -148,7 +142,7 @@ impl Engine {
                 };
 
                 channel.basic_publish(
-                    &REQUEST_EXCHANGE,
+                    &endpoint_publish.get_request_exchange(),
                     &endpoint_publish.get_microservice(),
                     message["content"].dump().as_bytes(),
                     &publish_message_options,

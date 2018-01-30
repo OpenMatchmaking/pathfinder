@@ -10,6 +10,13 @@ use error::{PathfinderError};
 
 use self::config::{Config, Value};
 
+
+/// Default AMQP exchange point for requests
+pub const REQUEST_EXCHANGE: &'static str = "open-matchmaking.direct";
+/// Default AMQP exchange point for responses
+pub const RESPONSE_EXCHANGE: &'static str = "open-matchmaking.responses.direct";
+
+
 /// A struct which stores an original URL that must be converted to the
 /// certain microservice endpoint.
 ///
@@ -25,16 +32,20 @@ use self::config::{Config, Value};
 #[derive(Debug, Clone)]
 pub struct Endpoint {
     url: String,
-    microservice: String
+    microservice: String,
+    request_exchange: String,
+    response_exchange: String,
 }
 
 
 impl Endpoint {
     /// Returns a new instance of `Endpoint`.
-    pub fn new(url: &str, microservice: &str) -> Endpoint {
+    pub fn new(url: &str, microservice: &str, request_exchange: &str, response_exchange: &str) -> Endpoint {
         Endpoint {
             url: url.to_string(),
-            microservice: microservice.to_string()
+            microservice: microservice.to_string(),
+            request_exchange: request_exchange.to_string(),
+            response_exchange: response_exchange.to_string()
         }
     }
 
@@ -47,14 +58,24 @@ impl Endpoint {
     pub fn get_microservice(&self) -> String {
         self.microservice.clone()
     }
+
+    /// Returns a request exchange point name.
+    pub fn get_request_exchange(&self) -> String {
+        self.request_exchange.clone()
+    }
+
+    /// Returns a response exchange point name.
+    pub fn get_response_exchange(&self) -> String {
+        self.response_exchange.clone()
+    }
 }
 
 
-/// Extract a value configuration object as a string if it exists. Otherwise returns an empty string.
-fn get_value_from_config_as_str(conf: &HashMap<String, Value>, key: &str) -> String {
+/// Extract a value configuration object as a string if it exists. Otherwise returns an default value as a string.
+fn get_value_from_config_as_str(conf: &HashMap<String, Value>, key: &str, default: &str) -> String {
     match conf.get(key) {
         Some(value) => value.to_owned().into_str().unwrap(),
-        None => String::from("")
+        None => String::from(default)
     }
 }
 
@@ -68,6 +89,9 @@ pub fn extract_endpoints(conf: Box<Config>) -> HashMap<String, Rc<Box<Endpoint>>
         Ok(array) => array,
         Err(_) => Vec::new()
     };
+
+    let default_request_exchange = String::from(REQUEST_EXCHANGE);
+    let default_response_exchange = String::from(RESPONSE_EXCHANGE);
 
     for endpoint in &config_endpoints {
 
@@ -102,9 +126,11 @@ pub fn extract_endpoints(conf: Box<Config>) -> HashMap<String, Rc<Box<Endpoint>>
             continue;
         }
 
-        let url = get_value_from_config_as_str(&configuration, "url");
-        let microservice = get_value_from_config_as_str(&configuration, "microservice");
-        let endpoint = Rc::new(Box::new(Endpoint::new(&url, &microservice)));
+        let url = get_value_from_config_as_str(&configuration, "url", "");
+        let microservice = get_value_from_config_as_str(&configuration, "microservice", "");
+        let request_exchange = get_value_from_config_as_str(&configuration, "request_exchange", &default_request_exchange);
+        let response_exchange = get_value_from_config_as_str(&configuration, "response_exchange", &default_response_exchange);
+        let endpoint = Rc::new(Box::new(Endpoint::new(&url, &microservice, &request_exchange, &response_exchange)));
         endpoints.insert(url, endpoint);
     }
 
