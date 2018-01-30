@@ -37,11 +37,11 @@ a file. For example:
 pathfinder --config=myconfig.yaml -p 8001
 ```
 At the current stage of this project, reverse proxy is support only endpoints list, which is using for mapping URLs into certain Kafka topics.
-Each of those endpoints contains two fields:
-- `url` - URL that specified by a client in each request.
-- `microservice` - Means the name of topic (or queue) where will be storing the message. This topic (or queue) is listening by certain microservice.
-- `request_exchange` - Defines the name of exchange point for RabbitMQ, through which the reverse proxy should publish a message.
-- `response_exchange` - Defines the name of exchange point for RabbitMQ, through which the reverse proxy should consume a message.
+Each of those endpoints contains four fields:
+- `url` - URL that specified by a client in each request. Required.
+- `microservice` - Means the name of topic (or queue) where will be storing the message. This topic (or queue) is listening by certain microservice. Required.
+- `request_exchange` - Defines the name of exchange point for RabbitMQ, through which the reverse proxy should publish a message. Optional.
+- `response_exchange` - Defines the name of exchange point for RabbitMQ, through which the reverse proxy should consume a message. Optional.
 
 ### Example
 ```yaml
