@@ -51,6 +51,24 @@ use super::super::error::{Result, PathfinderError};
 /// assert_eq!(route.match_url(url).is_err(), true);
 /// ```
 ///
+/// For cases when necessary to return an endpoint that bases on the value,
+/// that wasn't specified in configuration file, you can do this via
+/// using `match_url_or_default` method:
+///
+/// ```
+/// use config::{get_config};
+/// use engine::router::{Router, Endpoint, extract_endpoints};
+///
+/// let url = "/api/matchmaking/rewards";
+/// let config = get_config(&"../../../tests/files/config_with_valid_endpoints.yaml");
+/// let endpoints = extract_endpoints(config);
+/// let router = Box::new(Router::new(endpoints))
+///
+/// let endpoint = route.match_url_or_default(url);
+/// assert_eq!(endpoint.get_url(), "/api/matchmaking/rewards");
+/// assert_eq!(endpoint.get_microservice(), "api.matchmaking.rewards");
+/// ```
+///
 pub struct Router {
     endpoints: HashMap<String, Rc<Box<Endpoint>>>
 }
@@ -99,36 +117,50 @@ impl Router {
 #[cfg(test)]
 mod tests {
     use config::{get_config};
-    use engine::router::{Router, Endpoint, extract_endpoints};
-    use error::{Result};
+    use engine::router::{Router, extract_endpoints};
 
-    fn get_route(file_path: &str, url: &str) -> Result<Box<Endpoint>> {
+    fn get_router(file_path: &str) -> Box<Router> {
         let config = get_config(file_path);
         let endpoints = extract_endpoints(config);
-        let router = Box::new(Router::new(endpoints));
-        router.match_url(url)
+        Box::new(Router::new(endpoints))
     }
 
     #[test]
-    fn test_router_returns_endpoint_for_a_match() {
-        let route = get_route(
-            &"./tests/files/config_with_valid_endpoints.yaml",
-            "/api/matchmaking/search"
-        );
+    fn test_router_match_url_returns_an_endpoint_for_a_matched_url() {
+        let router = get_router(&"./tests/files/config_with_valid_endpoints.yaml");
+        let result_match = router.match_url(&"/api/matchmaking/search");
 
-        assert_eq!(route.is_ok(), true);
-        let endpoint = route.unwrap();
+        assert_eq!(result_match.is_ok(), true);
+        let endpoint = result_match.unwrap();
         assert_eq!(endpoint.get_url(), "/api/matchmaking/search");
         assert_eq!(endpoint.get_microservice(), "microservice.search");
     }
 
     #[test]
-    fn test_router_returns_an_error_for_non_existing_endpoint() {
-        let route = get_route(
-            &"./tests/files/config_with_invalid_endpoints.yaml",
-            "/api/matchmaking/search"
-        );
+    fn test_routers_match_url_returns_an_error_for_an_unknown_url() {
+        let router = get_router(&"./tests/files/config_with_invalid_endpoints.yaml");
+        let result_match = router.match_url(&"/api/matchmaking/search");
 
-        assert_eq!(route.is_err(), true);
+        assert_eq!(result_match.is_err(), true);
+    }
+
+    #[test]
+    fn test_router_match_url_or_default_returns_an_existing_endpoint_for_a_matched_url()
+    {
+        let router = get_router(&"./tests/files/config_with_valid_endpoints.yaml");
+        let endpoint = router.match_url_or_default(&"/api/matchmaking/search");
+
+        assert_eq!(endpoint.get_url(), "/api/matchmaking/search");
+        assert_eq!(endpoint.get_microservice(), "microservice.search");
+    }
+
+    #[test]
+    fn test_router_returns_a_default_match_return_a_custom_endpoint_for_an_unknown_url()
+    {
+        let router = get_router(&"./tests/files/config_with_valid_endpoints.yaml");
+        let endpoint = router.match_url_or_default(&"/api/matchmaking/unknown");
+
+        assert_eq!(endpoint.get_url(), "/api/matchmaking/unknown");
+        assert_eq!(endpoint.get_microservice(), "api.matchmaking.unknown");
     }
 }
