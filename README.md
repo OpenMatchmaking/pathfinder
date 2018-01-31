@@ -1,6 +1,11 @@
 # pathfinder
 An asynchronous WebSocket-over-RabbitMQ reverse proxy, based on the tokio and futures-rs crates.
 
+# Features
+- Configuring a behaviour of the reverse proxy via CLI options and YAML files
+- Working with Redis (in read-only mode) for validating a JSON Web Token for getting an access to microservices
+- Transferring requests to the certain microservices via RabbitMQ queues and returning responses in JSON format
+
 # Usage
 ```
 USAGE:
