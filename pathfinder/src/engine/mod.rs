@@ -73,11 +73,6 @@ impl Engine {
             .and_then(move |client| {
                 client.create_confirm_channel(ConfirmSelectOptions::default())
             })
-            .map_err(|err| {
-                let message = format!("Error during creating a channel. Reason -> {}", err);
-                error!("{}", message);
-                err
-            })
 
             // 2. Declare a response queue
             .and_then(move |channel| {
@@ -92,11 +87,6 @@ impl Engine {
                 channel.queue_declare(&queue_name, &queue_declare_options, &FieldTable::new())
                     .map(|_| channel)
             })
-            .map_err(|err| {
-                let message = format!("Error during declaring the queue. Reason -> {}", err);
-                error!("{}", message);
-                err
-            })
 
             // 3. Link the response queue the exchange
             .and_then(move |channel| {
@@ -108,11 +98,6 @@ impl Engine {
                     &FieldTable::new()
                 )
                     .map(|_| channel)
-            })
-            .map_err(|err| {
-                let message = format!("Error during linking the response queue with exchange. Reason -> {}", err);
-                error!("{}", message);
-                err
             })
 
              // 4. Publish message into the microservice queue and make ensure that it's delivered
@@ -150,11 +135,6 @@ impl Engine {
                 )
                     .map(|_confirmation| channel)
             })
-            .map_err(|err| {
-                let message = format!("Error during publishing a message. Reason -> {}", err);
-                error!("{}", message);
-                err
-            })
 
             // 5. Consume a response message from the queue, that was declared on the 2nd step
             .and_then(move |channel| {
@@ -171,11 +151,6 @@ impl Engine {
                               .map(move |(message, _)| (channel, message.unwrap()))
                     })
             })
-            .map_err(|err| {
-                let message = format!("Error during consuming the response message. Reason -> {}", err);
-                error!("{}", message);
-                err
-            })
 
             // 6. Prepare a response for a client, serialize and sent via WebSocket transmitter
             .and_then(move |(channel, message)| {
@@ -186,11 +161,6 @@ impl Engine {
                 transmitter.unbounded_send(response).unwrap();
                 channel.basic_ack(message.delivery_tag)
                     .map(move |_| channel)
-            })
-            .map_err(|err| {
-                let message = format!("Error during sending a message to the client. Reason -> {}", err);
-                error!("{}", message);
-                err
             })
 
             // 7. Unbind the response queue from the exchange point
@@ -205,11 +175,6 @@ impl Engine {
             //    )
             //        .map(|_| channel)
             //})
-            //.map_err(|err| {
-            //    let message = format!("Error during linking the response queue with exchange: {}", err);
-            //    error!("{}", message);
-            //    Err(PathfinderError::Io(err))
-            //})
 
             // 8. Delete the response queue
             .and_then(move |channel| {
@@ -222,28 +187,20 @@ impl Engine {
                 channel.queue_delete(&queue_name_delete, &queue_delete_options)
                     .map(|_| channel)
             })
-            .map_err(|err| {
-                let message = format!("Error during deleting the queue. Reason -> {}", err);
-                error!("{}", message);
-                err
-            })
 
             // 9. Close the channel
             .and_then(move |channel| {
                 channel.close(200, "Close the channel.")
             })
-            .map_err(|err| {
-                let message = format!("Error during closing the channel. Reason -> {}", err);
-                error!("{}", message);
-                err
-            })
 
             .then(move |result| {
                 match result {
                     Ok(_) => Ok(()),
-                    Err(_) => Err(PathfinderError::MessageBrokerError(
-                        String::from("The request wasn't processed. Please, try once again.")
-                    ))
+                    Err(err) => {
+                        error!("Error in RabbitMQ client. Reason -> {}", err);
+                        let message = String::from("The request wasn't processed. Please, try once again.");
+                        Err(PathfinderError::MessageBrokerError(message))
+                    }
                 }
             })
         )
