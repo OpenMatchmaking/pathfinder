@@ -37,7 +37,7 @@ pub struct CliOptions {
     #[structopt(short = "p",
                 long = "port",
                 help = "The listened port",
-                default_value = "8080")]
+                default_value = "9000")]
     pub port: u16,
 
     #[structopt(short = "l",
