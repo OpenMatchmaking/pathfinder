@@ -20,7 +20,7 @@ FLAGS:
 OPTIONS:
     -c, --config <config>                                  Path to a custom settings file [default: ]
     -i, --ip <ip>                                          The used IP for a server [default: 127.0.0.1]
-    -p, --port <port>                                      The listened port [default: 8080]
+    -p, --port <port>                                      The listened port [default: 9000]
     -l, --log-level <log_level>                            Verbosity level filter of the logger [default: info]
         --rabbitmq-host <rabbitmq_host>                    The used host by RabbitMQ broker [default: 127.0.0.1]
         --rabbitmq-port <rabbitmq_port>                    The listened port by RabbitMQ broker [default: 5672]
