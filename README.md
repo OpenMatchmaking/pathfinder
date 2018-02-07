@@ -45,8 +45,8 @@ At the current stage of this project, reverse proxy is support only endpoints li
 Each of those endpoints contains four fields:
 - `url` - URL that specified by a client in each request. Required.
 - `microservice` - Means the name of topic (or queue) where will be storing the message. This topic (or queue) is listening by certain microservice. Required.
-- `request_exchange` - Defines the name of exchange point for RabbitMQ, through which the reverse proxy should publish a message. Optional.
-- `response_exchange` - Defines the name of exchange point for RabbitMQ, through which the reverse proxy should consume a message. Optional.
+- `request_exchange` - Defines the name of exchange point for RabbitMQ, through which the reverse proxy should publish a message. Optional. Default: **open-matchmaking.direct**
+- `response_exchange` - Defines the name of exchange point for RabbitMQ, through which the reverse proxy should consume a message. Optional. Default: **open-matchmaking.responses.direct**
 
 ### Example
 ```yaml
