@@ -93,7 +93,7 @@ impl Engine {
                 channel.queue_bind(
                     &queue_name_bind,
                     &endpoint_link.get_response_exchange(),
-                    &endpoint_link.get_microservice(),
+                    &queue_name_bind,
                     &QueueBindOptions::default(),
                     &FieldTable::new()
                 )
