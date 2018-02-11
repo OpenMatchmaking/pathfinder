@@ -9,7 +9,7 @@ use super::super::super::error::{PathfinderError};
 use futures::future::{Future};
 use lapin_futures_rustls::{AMQPConnectionRustlsExt, lapin};
 use lapin_futures_tls_api::{AMQPStream};
-use tokio_core::reactor::{Handle};
+use tokio::reactor::{Handle};
 
 
 /// Alias for the lapin future type

@@ -25,7 +25,7 @@ structopt = "0.1"
 structopt-derive = "0.1"
 tls-api-stub = "0.1.12"
 log = "0.4"
-tokio-core = "0.1.10"
+tokio = "0.1.1"
 tokio-tungstenite = "0.4.0"
 tungstenite = "0.5.0"
 uuid = { version = "0.5", features = ["v4"] }

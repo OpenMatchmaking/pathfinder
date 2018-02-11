@@ -10,7 +10,7 @@ use cli::{CliOptions};
 use futures::{Future};
 use futures::future::lazy;
 use jsonwebtoken::{Validation, Algorithm};
-use tokio_core::reactor::{Handle};
+use tokio::reactor::{Handle};
 use redis_async::client::{paired_connect};
 use redis_async::error::{Error as RedisError};
 

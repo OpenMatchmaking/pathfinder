@@ -12,7 +12,7 @@ extern crate lapin_futures_rustls;
 extern crate lapin_futures_tls_api;
 #[macro_use]
 extern crate log;
-extern crate tokio_core;
+extern crate tokio;
 extern crate tokio_tungstenite;
 extern crate tungstenite;
 #[macro_use]

@@ -7,7 +7,7 @@ use super::super::engine::serializer::{JsonMessage};
 use cli::{CliOptions};
 use futures::{Future};
 use futures::future::{lazy};
-use tokio_core::reactor::{Handle};
+use tokio::reactor::{Handle};
 
 
 /// Type alias for future result type.

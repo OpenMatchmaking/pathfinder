@@ -29,7 +29,7 @@ use lapin_futures_rustls::lapin::types::{AMQPValue, FieldTable};
 use lapin_futures_rustls::lapin::channel::{ConfirmSelectOptions};
 use lapin_futures_rustls::lapin::channel::{BasicPublishOptions, BasicProperties, BasicConsumeOptions};
 use lapin_futures_rustls::lapin::channel::{QueueDeclareOptions, QueueDeleteOptions, QueueBindOptions};
-use tokio_core::reactor::{Handle};
+use tokio::reactor::{Handle};
 use tungstenite::{Message};
 use uuid::{Uuid};
 

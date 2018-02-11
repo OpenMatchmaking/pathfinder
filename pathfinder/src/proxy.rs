@@ -23,11 +23,12 @@ use cli::{CliOptions};
 use futures::sync::{mpsc};
 use futures::{Future, Sink};
 use futures::stream::{Stream, SplitSink};
-use tokio_core::net::{TcpListener, TcpStream};
-use tokio_core::reactor::{Core};
+use tokio::executor::{current_thread};
+use tokio::net::{TcpListener, TcpStream};
+use tokio::reactor::{Handle};
 use tokio_tungstenite::{accept_async};
-use tungstenite::protocol::{Message};
 use tokio_tungstenite::{WebSocketStream};
+use tungstenite::protocol::{Message};
 
 
 /// A reverse proxy application.
@@ -55,12 +56,11 @@ impl Proxy {
 
     /// Run the server on the specified address and port.
     pub fn run(&self, address: SocketAddr) {
-        let mut core = Core::new().unwrap();
-        let handle = core.handle();
-        let socket = TcpListener::bind(&address, &handle).unwrap();
+        let handle = Handle::default();
+        let listener = TcpListener::bind(&address).unwrap();
         println!("Listening on: {}", address);
 
-        let server = socket.incoming().for_each(|(stream, addr)| {
+        let server = listener.incoming().for_each(|(stream, addr)| {
             let engine_local = self.engine.clone();
             let connections_local = self.connections.clone();
             let auth_middleware_local = self.auth_middleware.clone();
@@ -120,7 +120,7 @@ impl Proxy {
                                 ()
                             });
 
-                        handle_inner.spawn(processing_request_future);
+                        current_thread::spawn(processing_request_future);
                         Ok(())
                     });
 
@@ -135,7 +135,7 @@ impl Proxy {
                                               .select(ws_writer.map(|_| ()).map_err(|_| ()));
 
                     // Close the connection after using
-                    handle_local.spawn(connection.then(move |_| {
+                    current_thread::spawn(connection.then(move |_| {
                         connections_local.borrow_mut().remove(&addr);
                         debug!("Connection {} closed.", addr);
                         Ok(())
@@ -151,6 +151,6 @@ impl Proxy {
         });
 
         // Run the server
-        core.run(server).unwrap();
+        current_thread::run(|_| server);
     }
 }
