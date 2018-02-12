@@ -49,7 +49,7 @@ impl JwtTokenMiddleware {
             iss: Some(String::from(DEFAULT_ISSUER)),
             sub: None,
             aud: None,
-            algorithms: Some(vec![Algorithm::HS512]),
+            algorithms: vec![Algorithm::HS512],
         }
     }
 }

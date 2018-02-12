@@ -37,6 +37,6 @@ impl EmptyMiddleware {
 impl Middleware for EmptyMiddleware {
     /// Returns an empty future which is doesn't doing anything.
     fn process_request(&self, _message: JsonMessage, _handle: &Handle) -> MiddlewareFuture {
-        Box::new( lazy(move || { Ok(())}) )
+        Box::new(lazy(move || Ok(())))
     }
 }
