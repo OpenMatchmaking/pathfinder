@@ -10,7 +10,7 @@ use cli::{CliOptions};
 use futures::{Future};
 use futures::future::lazy;
 use jsonwebtoken::{Validation, Algorithm};
-use tokio::reactor::{Handle};
+use tokio::executor::{current_thread};
 use redis_async::client::{paired_connect};
 use redis_async::error::{Error as RedisError};
 
@@ -56,7 +56,7 @@ impl JwtTokenMiddleware {
 
 
 impl Middleware for JwtTokenMiddleware {
-    fn process_request(&self, message: JsonMessage, handle: &Handle) -> MiddlewareFuture {
+    fn process_request(&self, message: JsonMessage) -> MiddlewareFuture {
         // Extract a token from a JSON object
         let token = match message["token"].as_str() {
             Some(token) => String::from(token),
@@ -73,7 +73,7 @@ impl Middleware for JwtTokenMiddleware {
             Some(ref password) => {
                 let password_inner = password.clone();
                 Box::new(
-                    paired_connect(&redis_socket_address, handle)
+                    paired_connect(&redis_socket_address, current_thread::task_executor())
                         // Log in into Redis instance before doing any work
                         .and_then(|connection| {
                             connection.send::<String>(resp_array!["AUTH", password_inner])
@@ -88,7 +88,7 @@ impl Middleware for JwtTokenMiddleware {
                         .map(|connection| connection)
                 )
             },
-            _ => paired_connect(&redis_socket_address, handle)
+            _ => paired_connect(&redis_socket_address, current_thread::task_executor())
         };
 
         let token_inner = token.clone();

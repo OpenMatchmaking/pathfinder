@@ -104,7 +104,7 @@ impl Proxy {
 
                         // 2. Apply a middleware to each incoming message
                         let auth_future = auth_middleware_local.borrow()
-                            .process_request(json_message.clone(), &handle_inner);
+                            .process_request(json_message.clone());
 
                         // 3. Put request into a queue in RabbitMQ and receive the response
                         let rabbitmq_future = engine_local.borrow().handle(

@@ -7,7 +7,6 @@ use super::super::engine::serializer::{JsonMessage};
 use cli::{CliOptions};
 use futures::{Future};
 use futures::future::{lazy};
-use tokio::reactor::{Handle};
 
 
 /// Type alias for future result type.
@@ -18,7 +17,7 @@ pub type MiddlewareFuture = Box<Future<Item=(), Error=PathfinderError> + 'static
 pub trait Middleware {
     /// Applied transforms and checks to an incoming request. If it failed,
     /// then should return a `PathfinderError` instance.
-    fn process_request(&self, message: JsonMessage, handle: &Handle) -> MiddlewareFuture;
+    fn process_request(&self, message: JsonMessage) -> MiddlewareFuture;
 }
 
 
@@ -36,7 +35,7 @@ impl EmptyMiddleware {
 
 impl Middleware for EmptyMiddleware {
     /// Returns an empty future which is doesn't doing anything.
-    fn process_request(&self, _message: JsonMessage, _handle: &Handle) -> MiddlewareFuture {
+    fn process_request(&self, _message: JsonMessage) -> MiddlewareFuture {
         Box::new(lazy(move || Ok(())))
     }
 }
