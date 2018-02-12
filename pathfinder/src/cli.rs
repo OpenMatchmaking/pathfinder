@@ -5,12 +5,13 @@
 
 extern crate clap;
 
+
 /// A structure that defines available arguments and options for CLI
 #[derive(StructOpt, Debug)]
 #[structopt(name = "Pathfinder",
             version = "0.1.0",
             about = "WebSocket-over-RabbitMQ reverse proxy",
-            setting_raw = "clap::AppSettings::DeriveDisplayOrder")]
+            raw(setting = "clap::AppSettings::DeriveDisplayOrder"))]
 pub struct CliOptions {
     #[structopt(short = "s",
                 long = "secured",
