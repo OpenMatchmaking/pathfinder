@@ -9,17 +9,10 @@ pub mod rabbitmq;
 pub mod router;
 pub mod serializer;
 
-use std::cell::{RefCell};
 use std::rc::{Rc};
 use std::str::{from_utf8};
+use std::sync::{Arc, RwLock};
 use std::vec::Vec;
-
-pub use self::router::{Router, Endpoint, extract_endpoints};
-pub use self::serializer::{Serializer, JsonMessage};
-pub use self::rabbitmq::{RabbitMQClient, RabbitMQFuture};
-
-use super::cli::{CliOptions};
-use super::error::{Result, PathfinderError};
 
 use json::{parse as json_parse};
 use futures::{Stream};
@@ -33,11 +26,18 @@ use tokio::reactor::{Handle};
 use tungstenite::{Message};
 use uuid::{Uuid};
 
+pub use self::router::{Router, Endpoint, extract_endpoints};
+pub use self::serializer::{Serializer, JsonMessage};
+pub use self::rabbitmq::{RabbitMQClient, RabbitMQFuture};
+
+use super::cli::{CliOptions};
+use super::error::{Result, PathfinderError};
+
 
 /// Proxy engine for processing messages, handling errors and communicating with a message broker.
 pub struct Engine {
-    router: Rc<Box<Router>>,
-    rabbitmq_client: Rc<RefCell<Box<RabbitMQClient>>>
+    router: Arc<RwLock<Box<Router>>>,
+    rabbitmq_client: Arc<RwLock<Box<RabbitMQClient>>>
 }
 
 
@@ -45,8 +45,8 @@ impl Engine {
     /// Returns a new instance of `Engine`.
     pub fn new(cli: &CliOptions, router: Box<Router>) -> Engine {
         Engine {
-            router: Rc::new(router),
-            rabbitmq_client: Rc::new(RefCell::new(Box::new(RabbitMQClient::new(cli))))
+            router: Arc::new(RwLock::new(router)),
+            rabbitmq_client: Arc::new(RwLock::new(Box::new(RabbitMQClient::new(cli))))
         }
     }
 
@@ -55,7 +55,7 @@ impl Engine {
         let message_nested = message.clone();
         let url = message_nested["url"].as_str().unwrap();
 
-        let endpoint = self.router.clone().match_url_or_default(&url);
+        let endpoint = self.router.clone().read().unwrap().match_url_or_default(&url).read().unwrap();
         let endpoint_link = endpoint.clone();
         let endpoint_publish = endpoint.clone();
 
@@ -226,7 +226,7 @@ impl Engine {
     }
 
     /// Prepares a list of key-value pairs for headers in message.
-    fn prepare_request_headers(&self, json: &JsonMessage, endpoint: Rc<Box<Endpoint>>) -> Box<Vec<(String, String)>> {
+    fn prepare_request_headers(&self, json: &JsonMessage, endpoint: Box<Endpoint>) -> Box<Vec<(String, String)>> {
         Box::new(vec![
             (String::from("Microservice-Name"), endpoint.get_microservice()),
             (String::from("Request-URI"), endpoint.get_url()),
