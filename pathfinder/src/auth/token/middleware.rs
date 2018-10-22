@@ -12,7 +12,6 @@ use futures::future::lazy;
 use jsonwebtoken::{Validation, Algorithm};
 use redis_async::client::{paired_connect};
 use redis_async::error::{Error as RedisError};
-use tokio_current_thread::{TaskExecutor};
 
 
 /// A middleware class, that will check a JSON Web Token in WebSocket message.

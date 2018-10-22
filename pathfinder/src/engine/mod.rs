@@ -19,9 +19,16 @@ use futures::{Stream};
 use futures::future::{Future};
 use futures::sync::{mpsc};
 use lapin_futures_rustls::lapin::types::{AMQPValue, FieldTable};
-use lapin_futures_rustls::lapin::channel::{ConfirmSelectOptions};
-use lapin_futures_rustls::lapin::channel::{BasicPublishOptions, BasicProperties, BasicConsumeOptions};
-use lapin_futures_rustls::lapin::channel::{QueueDeclareOptions, QueueDeleteOptions, QueueBindOptions};
+use lapin_futures_rustls::lapin::channel::{
+    ConfirmSelectOptions,
+    BasicConsumeOptions,
+    BasicProperties, 
+    BasicPublishOptions, 
+    QueueDeclareOptions, 
+    QueueDeleteOptions, 
+    QueueBindOptions,
+    QueueUnbindOptions, 
+};
 use tokio::reactor::{Handle};
 use tungstenite::{Message};
 use uuid::{Uuid};
@@ -50,6 +57,7 @@ impl Engine {
         }
     }
 
+    /// TODO: Replace endpoint/queue clones onto a one struct with expected fields
     /// Main handler for generating a response per each incoming request.
     pub fn handle(&self, message: JsonMessage, transmitter: mpsc::UnboundedSender<Message>, handle: &Handle) -> RabbitMQFuture {
         let message_nested = message.clone();
@@ -58,15 +66,17 @@ impl Engine {
         let endpoint = self.router.clone().read().unwrap().match_url_or_default(&url).read().unwrap();
         let endpoint_link = endpoint.clone();
         let endpoint_publish = endpoint.clone();
+        let endpoint_unbind = endpoint.clone();
 
         let queue_name = Rc::new(format!("{}", Uuid::new_v4()));
         let queue_name_bind = queue_name.clone();
         let queue_name_response = queue_name.clone();
         let queue_name_consumer = queue_name.clone();
+        let queue_name_unbind = queue_name.clone();
         let queue_name_delete = queue_name.clone();
 
         let request_headers = self.prepare_request_headers(&message_nested, endpoint.clone());
-        let client_future = self.rabbitmq_client.borrow().get_future(handle);
+        let client_future = self.rabbitmq_client.clone().read().unwrap().get_future(handle);
 
         Box::new(client_future
             // 1. Create a channel
@@ -84,24 +94,24 @@ impl Engine {
                     ..Default::default()
                 };
 
-                channel.queue_declare(&queue_name, &queue_declare_options, &FieldTable::new())
-                    .map(|_| channel)
+                channel.queue_declare(&queue_name, queue_declare_options, FieldTable::new())
+                    .map(move |queue| (channel, queue))
             })
 
             // 3. Link the response queue the exchange
-            .and_then(move |channel| {
+            .and_then(move |(channel, queue)| {
                 channel.queue_bind(
                     &queue_name_bind,
                     &endpoint_link.get_response_exchange(),
                     &queue_name_bind,
-                    &QueueBindOptions::default(),
-                    &FieldTable::new()
+                    QueueBindOptions::default(),
+                    FieldTable::new()
                 )
-                    .map(|_| channel)
+                    .map(move |_| (channel, queue))
             })
 
              // 4. Publish message into the microservice queue and make ensure that it's delivered
-            .and_then(move |channel| {
+            .and_then(move |(channel, queue)| {
                 let publish_message_options = BasicPublishOptions {
                     mandatory: true,
                     immediate: false,
@@ -129,52 +139,51 @@ impl Engine {
                 channel.basic_publish(
                     &endpoint_publish.get_request_exchange(),
                     &endpoint_publish.get_microservice(),
-                    message["content"].dump().as_bytes(),
-                    &publish_message_options,
+                    message["content"].dump().as_bytes().to_vec(),
+                    publish_message_options,
                     basic_properties
                 )
-                    .map(|_confirmation| channel)
+                    .map(move |_confirmation| (channel, queue))
             })
 
             // 5. Consume a response message from the queue, that was declared on the 2nd step
-            .and_then(move |channel| {
+            .and_then(move |(channel, queue)| {
                 channel.basic_consume(
-                    &queue_name_consumer,
+                    &queue,
                     "response_consumer",
-                    &BasicConsumeOptions::default(),
-                    &FieldTable::new()
+                    BasicConsumeOptions::default(),
+                    FieldTable::new()
                 )
                     .and_then(move |stream| {
                         stream.take(1)
                               .into_future()
                               .map_err(|(err, _)| err)
-                              .map(move |(message, _)| (channel, message.unwrap()))
+                              .map(move |(message, _)| (channel, queue, message.unwrap()))
                     })
             })
 
             // 6. Prepare a response for a client, serialize and sent via WebSocket transmitter
-            .and_then(move |(channel, message)| {
+            .and_then(move |(channel, queue, message)| {
                 let raw_data = from_utf8(&message.data).unwrap();
                 let json = Rc::new(Box::new(json_parse(raw_data).unwrap()));
                 let serializer = Serializer::new();
                 let response = serializer.serialize(json.dump()).unwrap();
                 transmitter.unbounded_send(response).unwrap();
-                channel.basic_ack(message.delivery_tag)
-                    .map(move |_| channel)
+                channel.basic_ack(message.delivery_tag, false)
+                    .map(move |_confirmation| (channel, queue))
             })
 
             // 7. Unbind the response queue from the exchange point
-            // TODO: Uncomment this code when my PR for queue_unbind will be merged
-            //.and_then(move |channel| {
-            //    channel.queue_unbind(
-            //        &queue_name_unbind,
-            //        &response_exchange_name,
-            //        &endpoint_unbind.get_microservice(),
-            //        &QueueUnbindOptions::default(),
-            //        &FieldTable::new()
-            //    )
-            //        .map(|_| channel)
-            //})
+            .and_then(move |(channel, queue)| {
+               channel.queue_unbind(
+                   &queue_name_unbind,
+                   &endpoint_unbind.get_response_exchange(),
+                   &endpoint_unbind.get_microservice(),
+                   QueueUnbindOptions::default(),
+                   FieldTable::new()
+                )
+                   .map(move |_| channel)
+            })
 
             // 8. Delete the response queue
             .and_then(move |channel| {
@@ -184,8 +193,8 @@ impl Engine {
                     ..Default::default()
                 };
 
-                channel.queue_delete(&queue_name_delete, &queue_delete_options)
-                    .map(|_| channel)
+                channel.queue_delete(&queue_name_delete, queue_delete_options)
+                    .map(move |_| channel)
             })
 
             // 9. Close the channel
