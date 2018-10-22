@@ -10,9 +10,9 @@ use cli::{CliOptions};
 use futures::{Future};
 use futures::future::lazy;
 use jsonwebtoken::{Validation, Algorithm};
-use tokio::executor::{current_thread};
 use redis_async::client::{paired_connect};
 use redis_async::error::{Error as RedisError};
+use tokio_current_thread::{TaskExecutor};
 
 
 /// A middleware class, that will check a JSON Web Token in WebSocket message.
@@ -73,7 +73,7 @@ impl Middleware for JwtTokenMiddleware {
             Some(ref password) => {
                 let password_inner = password.clone();
                 Box::new(
-                    paired_connect(&redis_socket_address, current_thread::task_executor())
+                    paired_connect(&redis_socket_address, TaskExecutor::current())
                         // Log in into Redis instance before doing any work
                         .and_then(|connection| {
                             connection.send::<String>(resp_array!["AUTH", password_inner])
@@ -88,7 +88,7 @@ impl Middleware for JwtTokenMiddleware {
                         .map(|connection| connection)
                 )
             },
-            _ => paired_connect(&redis_socket_address, current_thread::task_executor())
+            _ => paired_connect(&redis_socket_address, TaskExecutor::current())
         };
 
         let token_inner = token.clone();

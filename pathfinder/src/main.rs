@@ -14,6 +14,7 @@ extern crate lapin_futures_tls_api;
 extern crate log;
 extern crate tokio;
 extern crate tokio_tungstenite;
+extern crate tokio_current_thread;
 extern crate tungstenite;
 #[macro_use]
 extern crate redis_async;

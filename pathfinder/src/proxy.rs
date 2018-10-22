@@ -23,9 +23,10 @@ use cli::{CliOptions};
 use futures::sync::{mpsc};
 use futures::{Future, Sink};
 use futures::stream::{Stream, SplitSink};
-use tokio::executor::{current_thread};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::reactor::{Handle};
+use tokio::runtime::{run};
+use tokio_current_thread::{spawn};
 use tokio_tungstenite::{accept_async};
 use tokio_tungstenite::{WebSocketStream};
 use tungstenite::protocol::{Message};
@@ -120,7 +121,7 @@ impl Proxy {
                                 ()
                             });
 
-                        current_thread::spawn(processing_request_future);
+                        spawn(processing_request_future);
                         Ok(())
                     });
 
@@ -135,7 +136,7 @@ impl Proxy {
                                               .select(ws_writer.map(|_| ()).map_err(|_| ()));
 
                     // Close the connection after using
-                    current_thread::spawn(connection.then(move |_| {
+                    spawn(connection.then(move |_| {
                         connections_local.borrow_mut().remove(&addr);
                         debug!("Connection {} closed.", addr);
                         Ok(())
@@ -151,6 +152,6 @@ impl Proxy {
         });
 
         // Run the server
-        current_thread::run(|_| server);
+        run(|_| server);
     }
 }
