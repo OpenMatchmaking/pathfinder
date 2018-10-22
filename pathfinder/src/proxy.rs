@@ -9,34 +9,32 @@
 //! format.
 //!
 
-use std::cell::{RefCell};
 use std::collections::{HashMap};
 use std::error::{Error};
 use std::net::{SocketAddr};
-use std::rc::{Rc};
+use std::sync::{Arc, Mutex, RwLock};
+
+use cli::{CliOptions};
+use futures::sync::{mpsc};
+use futures::{Future, Sink};
+use futures::stream::{Stream};
+use tokio::net::{TcpListener};
+use tokio::reactor::{Handle};
+use tokio::runtime::{run};
+use tokio_current_thread::{spawn};
+use tokio_tungstenite::{accept_async};
+use tungstenite::protocol::{Message};
 
 use engine::{Engine};
 use auth::middleware::{Middleware, EmptyMiddleware};
 use auth::token::middleware::{JwtTokenMiddleware};
 
-use cli::{CliOptions};
-use futures::sync::{mpsc};
-use futures::{Future, Sink};
-use futures::stream::{Stream, SplitSink};
-use tokio::net::{TcpListener, TcpStream};
-use tokio::reactor::{Handle};
-use tokio::runtime::{run};
-use tokio_current_thread::{spawn};
-use tokio_tungstenite::{accept_async};
-use tokio_tungstenite::{WebSocketStream};
-use tungstenite::protocol::{Message};
-
 
 /// A reverse proxy application.
 pub struct Proxy {
-    engine: Rc<RefCell<Box<Engine>>>,
-    connections: Rc<RefCell<HashMap<SocketAddr, mpsc::UnboundedSender<Message>>>>,
-    auth_middleware: Rc<RefCell<Box<Middleware>>>,
+    engine: Arc<RwLock<Box<Engine>>>,
+    connections: Arc<Mutex<HashMap<SocketAddr, mpsc::UnboundedSender<Message>>>>,
+    auth_middleware: Arc<RwLock<Box<Middleware>>>,
 }
 
 
@@ -49,9 +47,9 @@ impl Proxy {
         };
 
         Proxy {
-            engine: Rc::new(RefCell::new(engine)),
-            connections: Rc::new(RefCell::new(HashMap::new())),
-            auth_middleware: Rc::new(RefCell::new(auth_middleware)),
+            engine: Arc::new(RwLock::new(engine)),
+            connections: Arc::new(Mutex::new(HashMap::new())),
+            auth_middleware: Arc::new(RwLock::new(auth_middleware)),
         }
     }
 
@@ -61,7 +59,9 @@ impl Proxy {
         let listener = TcpListener::bind(&address).unwrap();
         println!("Listening on: {}", address);
 
-        let server = listener.incoming().for_each(|(stream, addr)| {
+        let server = listener.incoming().for_each(move |stream| {
+            let addr = stream.peer_addr().expect("Connected stream should have a peer address.");
+
             let engine_local = self.engine.clone();
             let connections_local = self.connections.clone();
             let auth_middleware_local = self.auth_middleware.clone();
@@ -74,7 +74,7 @@ impl Proxy {
                     // send us messages. It could be used for broadcasting your data to
                     // another users in the future.
                     let (tx, rx) = mpsc::unbounded();
-                    connections_local.borrow_mut().insert(addr, tx);
+                    connections_local.lock().unwrap().insert(addr, tx);
 
                     // Split the WebSocket stream so that it will be possible to work
                     // with the reading and writing halves separately.
@@ -89,26 +89,26 @@ impl Proxy {
                         let addr_nested = addr.clone();
                         let engine_nested = engine_local.clone();
                         let connections_nested = connections_inner.clone();
-                        let transmitter_nested = &connections_nested.borrow_mut()[&addr_nested];
+                        let transmitter_nested = &connections_nested.clone().lock().unwrap()[&addr_nested];
                         let transmitter_nested2 = transmitter_nested.clone();
 
                         // 1. Deserialize message into JSON
-                        let json_message = match engine_local.borrow().deserialize_message(&message) {
+                        let json_message = match engine_local.read().unwrap().deserialize_message(&message) {
                             Ok(json_message) => json_message,
                             Err(err) => {
                                 let formatted_error = format!("{}", err);
-                                let error_message = engine_nested.borrow().wrap_an_error(formatted_error.as_str());
+                                let error_message = engine_nested.read().unwrap().wrap_an_error(formatted_error.as_str());
                                 transmitter_nested.unbounded_send(error_message).unwrap();
                                 return Ok(())
                             }
                         };
 
                         // 2. Apply a middleware to each incoming message
-                        let auth_future = auth_middleware_local.borrow()
+                        let auth_future = auth_middleware_local.read().unwrap()
                             .process_request(json_message.clone());
 
                         // 3. Put request into a queue in RabbitMQ and receive the response
-                        let rabbitmq_future = engine_local.borrow().handle(
+                        let rabbitmq_future = engine_local.read().unwrap().handle(
                             json_message.clone(), transmitter_nested.clone(), &handle_inner
                         );
 
@@ -116,7 +116,7 @@ impl Proxy {
                             .and_then(move |_| rabbitmq_future)
                             .map_err(move |err| {
                                 let formatted_error = format!("{}", err);
-                                let error_message = engine_nested.borrow().wrap_an_error(formatted_error.as_str());
+                                let error_message = engine_nested.read().unwrap().wrap_an_error(formatted_error.as_str());
                                 transmitter_nested2.unbounded_send(error_message).unwrap();
                                 ()
                             });
@@ -126,7 +126,7 @@ impl Proxy {
                     });
 
                     // Write back prepared responses
-                    let ws_writer = rx.fold(sink, |mut sink, msg| -> Result<SplitSink<WebSocketStream<TcpStream>>, ()> {
+                    let ws_writer = rx.fold(sink, |mut sink, msg| {
                         sink.start_send(msg).unwrap();
                         Ok(sink)
                     });
@@ -137,7 +137,7 @@ impl Proxy {
 
                     // Close the connection after using
                     spawn(connection.then(move |_| {
-                        connections_local.borrow_mut().remove(&addr);
+                        connections_inner.lock().unwrap().remove(&addr);
                         debug!("Connection {} closed.", addr);
                         Ok(())
                     }));
@@ -152,6 +152,6 @@ impl Proxy {
         });
 
         // Run the server
-        run(|_| server);
+        run(server.map_err(|_err| ()));
     }
 }
