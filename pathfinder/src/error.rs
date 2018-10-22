@@ -12,9 +12,9 @@ use std::error;
 use std::fmt;
 use std::result;
 
-use self::config::{ConfigError};
-
 use jsonwebtoken as jwt;
+
+use self::config::{ConfigError};
 
 
 /// Type alias for `Result` objects that return a Pathfinder error.
@@ -40,7 +40,7 @@ pub enum PathfinderError {
     DecodingError(String),
     /// The error that occurred when token isn't specified or invalid.
     AuthenticationError(String),
-    /// The error that occurred with a message broker
+    /// The error that occurred with a message broker.
     MessageBrokerError(String)
 }
 
@@ -95,6 +95,7 @@ impl From<config::ConfigError> for PathfinderError {
 
 impl From<jwt::errors::Error> for PathfinderError {
     fn from(err: jwt::errors::Error) -> PathfinderError {
-        PathfinderError::AuthenticationError(String::from(err.description()))
+        let error_description = format!("{}", err);
+        PathfinderError::AuthenticationError(error_description)
     }
 }
