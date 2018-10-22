@@ -73,7 +73,7 @@ impl Middleware for JwtTokenMiddleware {
             Some(ref password) => {
                 let password_inner = password.clone();
                 Box::new(
-                    paired_connect(&redis_socket_address, TaskExecutor::current())
+                    paired_connect(&redis_socket_address)
                         // Log in into Redis instance before doing any work
                         .and_then(|connection| {
                             connection.send::<String>(resp_array!["AUTH", password_inner])
@@ -88,7 +88,7 @@ impl Middleware for JwtTokenMiddleware {
                         .map(|connection| connection)
                 )
             },
-            _ => paired_connect(&redis_socket_address, TaskExecutor::current())
+            _ => paired_connect(&redis_socket_address)
         };
 
         let token_inner = token.clone();
