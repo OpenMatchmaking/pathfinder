@@ -11,7 +11,8 @@ pub mod serializer;
 use std::rc::{Rc};
 use std::str::{from_utf8};
 use std::sync::{Arc, RwLock};
-use std::vec::Vec;
+use std::vec::{Vec};
+use std::marker::{PhantomData};
 
 use json::{parse as json_parse};
 use futures::{Stream};
@@ -27,6 +28,7 @@ use lapin_futures_rustls::lapin::channel::{
     QueueBindOptions,
     QueueUnbindOptions, 
 };
+use tokio_io::{AsyncRead, AsyncWrite};
 use tungstenite::{Message};
 use uuid::{Uuid};
 
@@ -39,22 +41,27 @@ use super::rabbitmq::{RabbitMQClient, RabbitMQFuture};
 
 
 /// Proxy engine for processing messages, handling errors and communicating with a message broker.
-pub struct Engine {
+pub struct Engine<'a, T: 'a> {
     router: Arc<RwLock<Box<Router>>>,
+    phantom: PhantomData<&'a T>
 }
 
 
-impl Engine {
+impl<'a, T: 'a + AsyncRead + AsyncWrite + Send + Sync + 'static> Engine<'a, T> {
     /// Returns a new instance of `Engine`.
-    pub fn new(cli: &CliOptions, router: Box<Router>) -> Engine {
+    pub fn new(cli: &CliOptions, router: Box<Router>) -> Engine<'a, T> {
         Engine {
-            router: Arc::new(RwLock::new(router))
+            router: Arc::new(RwLock::new(router)),
+            phantom: PhantomData
         }
     }
 
     /// TODO: Replace endpoint/queue clones onto a one struct with expected fields
     /// Main handler for generating a response per each incoming request.
-    pub fn handle(&self, message: JsonMessage, transmitter: mpsc::UnboundedSender<Message>, rabbitmq_client: Box<RabbitMQClient>) -> RabbitMQFuture {
+    pub fn handle(&self,
+                  message: JsonMessage,
+                  transmitter: mpsc::UnboundedSender<Message>,
+                  rabbitmq_client: Box<RabbitMQClient<T>>) -> RabbitMQFuture {
         let message_nested = message.clone();
         let url = message_nested["url"].as_str().unwrap();
 

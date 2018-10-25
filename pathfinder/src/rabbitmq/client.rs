@@ -2,6 +2,7 @@
 //!
 
 use std::io;
+use std::marker::{PhantomData};
 
 use amq_protocol::uri::{AMQPUri};
 use futures::future::{Future};
@@ -10,7 +11,7 @@ use lapin_futures_rustls::lapin::channel::{Channel, ConfirmSelectOptions};
 use lapin_futures_rustls::lapin::client::{Client, ConnectionOptions};
 use lapin_futures_tls_internal::{AMQPStream};
 use tokio_current_thread::{spawn};
-use tokio_io::{AsyncRead};
+use tokio_io::{AsyncRead, AsyncWrite};
 use tokio_tcp::{TcpStream};
 use tokio_tls_api::{TlsStream};
 
@@ -22,26 +23,22 @@ use super::super::error::{PathfinderError};
 pub type LapinClient = Client<AMQPStream<TlsStream<TcpStream>>>;
 /// Alias for the lapin future type.
 pub type LapinFuture = Box<Future<Item=LapinClient, Error=io::Error> + 'static>;
-/// Alias for the lapin's channel.
-pub type LapinChannelFuture = Box<Future<
-    Item=Channel<AsyncRead + Send + Sync + 'static>,
-    Error=io::Error
-> + Send + 'static>;
 /// Alias for generic future for pathfinder and RabbitMQ.
 pub type RabbitMQFuture = Box<Future<Item=(), Error=PathfinderError> + 'static>;
 
 
 /// A future-based asynchronous RabbitMQ client.
-pub struct RabbitMQClient
+pub struct RabbitMQClient<'a, T: 'a>
 {
     uri: AMQPUri,
     client: Option<LapinClient>,
+    phantom: PhantomData<&'a T>
 }
 
 
-impl RabbitMQClient {
+impl<'a, T: AsyncRead + AsyncWrite + Send + Sync + 'static> RabbitMQClient<'a, T> {
     /// Returns a new instance of `RabbitMQClient`.
-    pub fn new(cli: &CliOptions) -> RabbitMQClient {
+    pub fn new(cli: &CliOptions) -> RabbitMQClient<'a, T> {
         let schema = match cli.rabbitmq_secured {
             true => "amqps",
             false => "amqp",
@@ -59,7 +56,8 @@ impl RabbitMQClient {
 
         RabbitMQClient {
             uri: uri.parse().unwrap(),
-            client: None
+            client: None,
+            phantom: PhantomData
         }
     }
 
@@ -67,7 +65,7 @@ impl RabbitMQClient {
         self.client = self.get_client();
     }
 
-    pub fn get_channel(&self) -> LapinChannelFuture {
+    pub fn get_channel(&self) -> impl Future<Item=Channel<T>, Error=io::Error> + Send + 'static {
         Box::new(
             self.client.unwrap().and_then(move |client| {
                 client.create_confirm_channel(ConfirmSelectOptions::default())

@@ -21,6 +21,7 @@ use futures::stream::{Stream};
 use tokio::net::{TcpListener};
 use tokio::reactor::{Handle};
 use tokio::runtime::{run};
+use tokio_io::{AsyncRead, AsyncWrite};
 use tokio_current_thread::{spawn};
 use tokio_tungstenite::{accept_async};
 use tungstenite::protocol::{Message};
@@ -33,17 +34,17 @@ use rabbitmq::{RabbitMQClient};
 
 
 /// A reverse proxy application.
-pub struct Proxy {
-    engine: Arc<RwLock<Box<Engine>>>,
-    rabbitmq_client: Arc<RwLock<Box<RabbitMQClient>>>,
+pub struct Proxy<'a, T: 'a> {
+    engine: Arc<RwLock<Box<Engine<'a, T>>>>,
+    rabbitmq_client: Arc<RwLock<Box<RabbitMQClient<'a, T>>>>,
     connections: Arc<Mutex<HashMap<SocketAddr, mpsc::UnboundedSender<Message>>>>,
-    auth_middleware: Arc<RwLock<Box<Middleware>>>
+    auth_middleware: Arc<RwLock<Box<Middleware>>>,
 }
 
 
-impl Proxy {
+impl<'a, T: AsyncRead + AsyncWrite + Send + Sync + 'static> Proxy<'a, T> {
     /// Returns a new instance of a reverse proxy application.
-    pub fn new(cli: &CliOptions, engine: Box<Engine>) -> Proxy {
+    pub fn new(cli: &CliOptions, engine: Box<Engine<'a, T>>) -> Proxy<'a, T> {
         let auth_middleware: Box<Middleware> = match cli.validate {
             true => Box::new(JwtTokenMiddleware::new(cli)),
             _ => Box::new(EmptyMiddleware::new(cli))
