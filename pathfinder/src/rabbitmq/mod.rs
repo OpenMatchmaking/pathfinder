@@ -3,9 +3,8 @@
 pub mod client;
 
 pub use self::client::{
-    AMQPStream,
     LapinClient,
-    LapinFuture,
+    LapinChannel,
     RabbitMQFuture,
     RabbitMQClient,
 };

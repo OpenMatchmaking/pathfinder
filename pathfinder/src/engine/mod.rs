@@ -12,7 +12,6 @@ use std::rc::{Rc};
 use std::str::{from_utf8};
 use std::sync::{Arc, RwLock};
 use std::vec::{Vec};
-use std::marker::{PhantomData};
 
 use json::{parse as json_parse};
 use futures::{Stream};
@@ -28,7 +27,6 @@ use lapin_futures_rustls::lapin::channel::{
     QueueBindOptions,
     QueueUnbindOptions, 
 };
-use tokio_io::{AsyncRead, AsyncWrite};
 use tungstenite::{Message};
 use uuid::{Uuid};
 
@@ -42,23 +40,19 @@ use super::rabbitmq::{RabbitMQClient, RabbitMQFuture};
 
 /// Alias type for msps sender.
 pub type MessageSender = mpsc::UnboundedSender<Message>;
-/// Alias type for RabbitMQ for a multithreaded environment.
-pub type MultithreadedRabbitMQClient<'a, T: 'a> = Arc<RwLock<Box<RabbitMQClient<'a, T>>>>;
 
 
 /// Proxy engine for processing messages, handling errors and communicating with a message broker.
-pub struct Engine<'a, T: 'a> {
-    router: Arc<RwLock<Box<Router>>>,
-    phantom: PhantomData<&'a T>
+pub struct Engine {
+    router: Arc<RwLock<Box<Router>>>
 }
 
 
-impl<'a, T: 'a + AsyncRead + AsyncWrite + Send + Sync + 'static> Engine<'a, T> {
+impl Engine {
     /// Returns a new instance of `Engine`.
-    pub fn new(cli: &CliOptions, router: Box<Router>) -> Engine<'a, T> {
+    pub fn new(cli: &CliOptions, router: Box<Router>) -> Engine {
         Engine {
-            router: Arc::new(RwLock::new(router)),
-            phantom: PhantomData
+            router: Arc::new(RwLock::new(router))
         }
     }
 
@@ -67,7 +61,7 @@ impl<'a, T: 'a + AsyncRead + AsyncWrite + Send + Sync + 'static> Engine<'a, T> {
     pub fn handle(&self,
                   message: JsonMessage,
                   transmitter: MessageSender,
-                  rabbitmq_client: MultithreadedRabbitMQClient<T>
+                  rabbitmq_client: Arc<RwLock<Box<RabbitMQClient>>>
     ) -> RabbitMQFuture {
         let message_nested = message.clone();
         let url = message_nested["url"].as_str().unwrap();
