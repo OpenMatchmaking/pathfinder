@@ -17,6 +17,7 @@ use std::sync::{Arc, Mutex, RwLock};
 use cli::{CliOptions};
 use futures::sync::{mpsc};
 use futures::{Future, Sink};
+use futures::future::{self, FutureResult};
 use futures::stream::{Stream};
 use tokio::net::{TcpListener};
 use tokio::reactor::{Handle};
@@ -59,16 +60,16 @@ impl<'a, T: AsyncRead + AsyncWrite + Send + Sync + 'static> Proxy<'a, T> {
         }
     }
 
-    fn init(&mut self) -> impl Future<Item=(), Error=PathfinderError> {
-        self.rabbitmq_client.clone().write().unwrap().init();
-        Ok(())
-    }
-
     /// Run the server on the specified address and port.
     pub fn run(&self, address: SocketAddr) {
         let handle = Handle::default();
         let listener = TcpListener::bind(&address).unwrap();
         println!("Listening on: {}", address);
+
+        let init = future::lazy(|_| -> FutureResult<(), PathfinderError> {
+            self.rabbitmq_client.clone().write().unwrap().init();
+            Ok(())
+        });
 
         let server = listener.incoming().for_each(move |stream| {
             let addr = stream.peer_addr().expect("Connected stream should have a peer address.");
@@ -163,6 +164,6 @@ impl<'a, T: AsyncRead + AsyncWrite + Send + Sync + 'static> Proxy<'a, T> {
         });
 
         // Run the server
-        run(self.init.and_then(|_| server.map_err(|_e| ())));
+        run(init.and_then(|_| server.map_err(|_e| ())));
     }
 }
