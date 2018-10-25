@@ -9,7 +9,7 @@ use futures::future::{Future};
 use lapin_futures_rustls::{AMQPConnectionRustlsExt};
 use lapin_futures_rustls::lapin::channel::{Channel, ConfirmSelectOptions};
 use lapin_futures_rustls::lapin::client::{Client, ConnectionOptions};
-use lapin_futures_tls_internal::{AMQPStream};
+use lapin_futures_tls_internal::{AMQPStream as LapinAMQPStream};
 use tokio_current_thread::{spawn};
 use tokio_io::{AsyncRead, AsyncWrite};
 use tokio_tcp::{TcpStream};
@@ -19,8 +19,10 @@ use super::super::cli::{CliOptions};
 use super::super::error::{PathfinderError};
 
 
-/// Alias for the Lapin client with TLS.
-pub type LapinClient = Client<AMQPStream<TlsStream<TcpStream>>>;
+/// Alias for the lapin AMQP stream.
+pub type AMQPStream = LapinAMQPStream<TlsStream<TcpStream>>;
+/// Alias for the lapin client with TLS.
+pub type LapinClient = Client<AMQPStream>;
 /// Alias for the lapin future type.
 pub type LapinFuture = Box<Future<Item=LapinClient, Error=io::Error> + 'static>;
 /// Alias for generic future for pathfinder and RabbitMQ.
@@ -62,14 +64,12 @@ impl<'a, T: AsyncRead + AsyncWrite + Send + Sync + 'static> RabbitMQClient<'a, T
     }
 
     pub fn init(&mut self) {
-        self.client = self.get_client();
+        self.client = Some(self.create_client());
     }
 
-    pub fn get_channel(&self) -> impl Future<Item=Channel<T>, Error=io::Error> + Send + 'static {
+    pub fn get_channel(&self) -> Box<Future<Item=Channel<AMQPStream>, Error=io::Error> + Send + 'static> {
         Box::new(
-            self.client.unwrap().and_then(move |client| {
-                client.create_confirm_channel(ConfirmSelectOptions::default())
-            })
+            self.client.unwrap().create_confirm_channel(ConfirmSelectOptions::default())
         )
     }
 

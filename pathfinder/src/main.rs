@@ -41,6 +41,8 @@ pub mod logging;
 pub mod proxy;
 pub mod rabbitmq;
 
+use tokio_io::{AsyncRead, AsyncWrite};
+
 use cli::{CliOptions};
 use config::{get_config};
 use engine::{Engine};
@@ -50,7 +52,7 @@ use logging::{setup_logger};
 use proxy::{Proxy};
 
 
-fn main() {
+fn main<T: AsyncRead + AsyncWrite + Send + Sync + 'static>() {
     let cli = CliOptions::from_args();
     match setup_logger(&cli) {
         Ok(_) => {},
@@ -60,8 +62,7 @@ fn main() {
     let config = get_config(&cli.config);
     let endpoints = extract_endpoints(config);
     let router = Box::new(Router::new(endpoints));
-    let engine = Box::new(Engine::new(&cli, router));
-
+    let engine: Box<Engine<T>> = Box::new(Engine::new(&cli, router));
 
     let proxy = Box::new(Proxy::new(&cli, engine));
     let address = format!("{}:{}", cli.ip, cli.port).parse().unwrap();

@@ -40,6 +40,12 @@ use super::error::{Result, PathfinderError};
 use super::rabbitmq::{RabbitMQClient, RabbitMQFuture};
 
 
+/// Alias type for msps sender.
+pub type MessageSender = mpsc::UnboundedSender<Message>;
+/// Alias type for RabbitMQ for a multithreaded environment.
+pub type MultithreadedRabbitMQClient<'a, T: 'a> = Arc<RwLock<Box<RabbitMQClient<'a, T>>>>;
+
+
 /// Proxy engine for processing messages, handling errors and communicating with a message broker.
 pub struct Engine<'a, T: 'a> {
     router: Arc<RwLock<Box<Router>>>,
@@ -60,8 +66,9 @@ impl<'a, T: 'a + AsyncRead + AsyncWrite + Send + Sync + 'static> Engine<'a, T> {
     /// Main handler for generating a response per each incoming request.
     pub fn handle(&self,
                   message: JsonMessage,
-                  transmitter: mpsc::UnboundedSender<Message>,
-                  rabbitmq_client: Box<RabbitMQClient<T>>) -> RabbitMQFuture {
+                  transmitter: MessageSender,
+                  rabbitmq_client: MultithreadedRabbitMQClient<T>
+    ) -> RabbitMQFuture {
         let message_nested = message.clone();
         let url = message_nested["url"].as_str().unwrap();
 
@@ -78,7 +85,7 @@ impl<'a, T: 'a + AsyncRead + AsyncWrite + Send + Sync + 'static> Engine<'a, T> {
         let queue_name_delete = queue_name.clone();
 
         let request_headers = self.prepare_request_headers(&message_nested, endpoint.clone());
-        let channel = rabbitmq_client.get_channel();
+        let channel = rabbitmq_client.clone().read().unwrap().get_channel();
 
         Box::new(
             // 1. Create a channel

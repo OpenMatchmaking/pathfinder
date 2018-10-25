@@ -50,11 +50,11 @@ impl<'a, T: AsyncRead + AsyncWrite + Send + Sync + 'static> Proxy<'a, T> {
             true => Box::new(JwtTokenMiddleware::new(cli)),
             _ => Box::new(EmptyMiddleware::new(cli))
         };
-        let rabbitmq_client = RabbitMQClient::new(cli);
+        let rabbitmq_client = Box::new(RabbitMQClient::new(cli));
 
         Proxy {
             engine: Arc::new(RwLock::new(engine)),
-            rabbitmq_client: Arc::new(Box::new(rabbitmq_client)),
+            rabbitmq_client: Arc::new(RwLock::new(rabbitmq_client)),
             connections: Arc::new(Mutex::new(HashMap::new())),
             auth_middleware: Arc::new(RwLock::new(auth_middleware)),
         }
@@ -66,15 +66,16 @@ impl<'a, T: AsyncRead + AsyncWrite + Send + Sync + 'static> Proxy<'a, T> {
         let listener = TcpListener::bind(&address).unwrap();
         println!("Listening on: {}", address);
 
-        let init = future::lazy(|_| -> FutureResult<(), PathfinderError> {
+        let init = future::lazy(|| -> FutureResult<(), PathfinderError> {
             self.rabbitmq_client.clone().write().unwrap().init();
-            Ok(())
+            future::ok::<(), PathfinderError>(())
         });
 
         let server = listener.incoming().for_each(move |stream| {
             let addr = stream.peer_addr().expect("Connected stream should have a peer address.");
 
             let engine_local = self.engine.clone();
+            let rabbimq_local = self.rabbitmq_client.clone();
             let connections_local = self.connections.clone();
             let auth_middleware_local = self.auth_middleware.clone();
             let handle_local = handle.clone();
@@ -93,7 +94,6 @@ impl<'a, T: AsyncRead + AsyncWrite + Send + Sync + 'static> Proxy<'a, T> {
                     let (sink, stream) = ws_stream.split();
 
                     // Read and process each message
-                    let handle_inner = handle_local.clone();
                     let connections_inner = connections_local.clone();
                     let ws_reader = stream.for_each(move |message: Message| {
 
@@ -121,7 +121,7 @@ impl<'a, T: AsyncRead + AsyncWrite + Send + Sync + 'static> Proxy<'a, T> {
 
                         // 3. Put request into a queue in RabbitMQ and receive the response
                         let rabbitmq_future = engine_local.read().unwrap().handle(
-                            json_message.clone(), transmitter_nested.clone(), &handle_inner
+                            json_message.clone(), transmitter_nested.clone(), rabbimq_local.clone()
                         );
 
                         let processing_request_future = auth_future
@@ -164,6 +164,9 @@ impl<'a, T: AsyncRead + AsyncWrite + Send + Sync + 'static> Proxy<'a, T> {
         });
 
         // Run the server
-        run(init.and_then(|_| server.map_err(|_e| ())));
+        let server_future = init
+            .map_err(|_err| ())
+            .and_then(|_| server.map_err(|_err| ()));
+        run(server_future);
     }
 }
