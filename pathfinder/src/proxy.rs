@@ -25,16 +25,19 @@ use tokio_current_thread::{spawn};
 use tokio_tungstenite::{accept_async};
 use tungstenite::protocol::{Message};
 
-use engine::{Engine};
 use auth::middleware::{Middleware, EmptyMiddleware};
 use auth::token::middleware::{JwtTokenMiddleware};
+use engine::{Engine};
+use error::{PathfinderError};
+use rabbitmq::{RabbitMQClient};
 
 
 /// A reverse proxy application.
 pub struct Proxy {
     engine: Arc<RwLock<Box<Engine>>>,
+    rabbitmq_client: Arc<RwLock<Box<RabbitMQClient>>>,
     connections: Arc<Mutex<HashMap<SocketAddr, mpsc::UnboundedSender<Message>>>>,
-    auth_middleware: Arc<RwLock<Box<Middleware>>>,
+    auth_middleware: Arc<RwLock<Box<Middleware>>>
 }
 
 
@@ -43,14 +46,21 @@ impl Proxy {
     pub fn new(cli: &CliOptions, engine: Box<Engine>) -> Proxy {
         let auth_middleware: Box<Middleware> = match cli.validate {
             true => Box::new(JwtTokenMiddleware::new(cli)),
-               _ => Box::new(EmptyMiddleware::new(cli))
+            _ => Box::new(EmptyMiddleware::new(cli))
         };
+        let rabbitmq_client = RabbitMQClient::new(cli);
 
         Proxy {
             engine: Arc::new(RwLock::new(engine)),
+            rabbitmq_client: Arc::new(Box::new(rabbitmq_client)),
             connections: Arc::new(Mutex::new(HashMap::new())),
             auth_middleware: Arc::new(RwLock::new(auth_middleware)),
         }
+    }
+
+    fn init(&mut self) -> impl Future<Item=(), Error=PathfinderError> {
+        self.rabbitmq_client.clone().write().unwrap().init();
+        Ok(())
     }
 
     /// Run the server on the specified address and port.
@@ -133,7 +143,7 @@ impl Proxy {
 
                     // Wait for either half to be done to tear down the other
                     let connection = ws_reader.map(|_| ()).map_err(|_| ())
-                                              .select(ws_writer.map(|_| ()).map_err(|_| ()));
+                        .select(ws_writer.map(|_| ()).map_err(|_| ()));
 
                     // Close the connection after using
                     spawn(connection.then(move |_| {
@@ -152,6 +162,6 @@ impl Proxy {
         });
 
         // Run the server
-        run(server.map_err(|_err| ()));
+        run(self.init.and_then(|_| server.map_err(|_e| ())));
     }
 }

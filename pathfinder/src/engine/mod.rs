@@ -5,7 +5,6 @@
 //! broker and preparing appropriate responses in the certain format.
 //!
 
-pub mod rabbitmq;
 pub mod router;
 pub mod serializer;
 
@@ -20,7 +19,6 @@ use futures::future::{Future};
 use futures::sync::{mpsc};
 use lapin_futures_rustls::lapin::types::{AMQPValue, FieldTable};
 use lapin_futures_rustls::lapin::channel::{
-    ConfirmSelectOptions,
     BasicConsumeOptions,
     BasicProperties, 
     BasicPublishOptions, 
@@ -29,22 +27,20 @@ use lapin_futures_rustls::lapin::channel::{
     QueueBindOptions,
     QueueUnbindOptions, 
 };
-use tokio::reactor::{Handle};
 use tungstenite::{Message};
 use uuid::{Uuid};
 
 pub use self::router::{Router, Endpoint, extract_endpoints};
 pub use self::serializer::{Serializer, JsonMessage};
-pub use self::rabbitmq::{RabbitMQClient, RabbitMQFuture};
 
 use super::cli::{CliOptions};
 use super::error::{Result, PathfinderError};
+use super::rabbitmq::{RabbitMQClient, RabbitMQFuture};
 
 
 /// Proxy engine for processing messages, handling errors and communicating with a message broker.
 pub struct Engine {
     router: Arc<RwLock<Box<Router>>>,
-    rabbitmq_client: Arc<RwLock<Box<RabbitMQClient>>>
 }
 
 
@@ -52,14 +48,13 @@ impl Engine {
     /// Returns a new instance of `Engine`.
     pub fn new(cli: &CliOptions, router: Box<Router>) -> Engine {
         Engine {
-            router: Arc::new(RwLock::new(router)),
-            rabbitmq_client: Arc::new(RwLock::new(Box::new(RabbitMQClient::new(cli))))
+            router: Arc::new(RwLock::new(router))
         }
     }
 
     /// TODO: Replace endpoint/queue clones onto a one struct with expected fields
     /// Main handler for generating a response per each incoming request.
-    pub fn handle(&self, message: JsonMessage, transmitter: mpsc::UnboundedSender<Message>, handle: &Handle) -> RabbitMQFuture {
+    pub fn handle(&self, message: JsonMessage, transmitter: mpsc::UnboundedSender<Message>, rabbitmq_client: Box<RabbitMQClient>) -> RabbitMQFuture {
         let message_nested = message.clone();
         let url = message_nested["url"].as_str().unwrap();
 
@@ -76,13 +71,11 @@ impl Engine {
         let queue_name_delete = queue_name.clone();
 
         let request_headers = self.prepare_request_headers(&message_nested, endpoint.clone());
-        let client_future = self.rabbitmq_client.clone().read().unwrap().get_future(handle);
+        let channel = rabbitmq_client.get_channel();
 
-        Box::new(client_future
+        Box::new(
             // 1. Create a channel
-            .and_then(move |client| {
-                client.create_confirm_channel(ConfirmSelectOptions::default())
-            })
+            channel
 
             // 2. Declare a response queue
             .and_then(move |channel| {

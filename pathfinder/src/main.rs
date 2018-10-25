@@ -15,10 +15,11 @@ extern crate lapin_futures_tls_internal;
 #[macro_use]
 extern crate log;
 extern crate tokio;
-extern crate tokio_tungstenite;
+extern crate tokio_io;
 extern crate tokio_current_thread;
 extern crate tokio_tcp;
 extern crate tokio_tls_api;
+extern crate tokio_tungstenite;
 extern crate tungstenite;
 #[macro_use]
 extern crate redis_async;
@@ -38,6 +39,7 @@ pub mod engine;
 pub mod error;
 pub mod logging;
 pub mod proxy;
+pub mod rabbitmq;
 
 use cli::{CliOptions};
 use config::{get_config};
@@ -59,6 +61,7 @@ fn main() {
     let endpoints = extract_endpoints(config);
     let router = Box::new(Router::new(endpoints));
     let engine = Box::new(Engine::new(&cli, router));
+
 
     let proxy = Box::new(Proxy::new(&cli, engine));
     let address = format!("{}:{}", cli.ip, cli.port).parse().unwrap();
