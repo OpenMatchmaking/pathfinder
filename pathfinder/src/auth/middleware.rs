@@ -14,7 +14,7 @@ pub type MiddlewareFuture = Box<Future<Item=(), Error=PathfinderError> + Sync + 
 
 
 /// A trait for types which can be used as middleware during processing a request from a client.
-pub trait Middleware {
+pub trait Middleware: Send + Sync {
     /// Applied transforms and checks to an incoming request. If it failed,
     /// then should return a `PathfinderError` instance.
     fn process_request(&self, message: JsonMessage) -> MiddlewareFuture;

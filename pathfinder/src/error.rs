@@ -12,8 +12,6 @@ use std::error;
 use std::fmt;
 use std::result;
 
-use jsonwebtoken as jwt;
-
 use self::config::{ConfigError};
 
 
@@ -89,13 +87,5 @@ impl From<io::Error> for PathfinderError {
 impl From<config::ConfigError> for PathfinderError {
     fn from(err: config::ConfigError) -> PathfinderError {
         PathfinderError::SettingsError(err)
-    }
-}
-
-
-impl From<jwt::errors::Error> for PathfinderError {
-    fn from(err: jwt::errors::Error) -> PathfinderError {
-        let error_description = format!("{}", err);
-        PathfinderError::AuthenticationError(error_description)
     }
 }

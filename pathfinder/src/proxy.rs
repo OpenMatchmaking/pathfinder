@@ -65,18 +65,24 @@ impl Proxy {
         let listener = TcpListener::bind(&address).unwrap();
         println!("Listening on: {}", address);
 
+        let engine = self.engine.clone();
+        let rabbitmq_client = self.rabbitmq_client.clone();
+        let connections = self.connections.clone();
+        let auth_middleware = self.auth_middleware.clone();
+
+        let rabbitmq_client_init = rabbitmq_client.clone();
         let init = future::lazy(|| -> FutureResult<(), PathfinderError> {
-            self.rabbitmq_client.clone().write().unwrap().init();
+            rabbitmq_client_init.write().unwrap().init();
             future::ok::<(), PathfinderError>(())
         });
 
         let server = listener.incoming().for_each(move |stream| {
             let addr = stream.peer_addr().expect("Connected stream should have a peer address.");
 
-            let engine_local = self.engine.clone();
-            let rabbimq_local = self.rabbitmq_client.clone();
-            let connections_local = self.connections.clone();
-            let auth_middleware_local = self.auth_middleware.clone();
+            let engine_local = engine.clone();
+            let rabbimq_local = rabbitmq_client.clone();
+            let connections_local = connections.clone();
+            let auth_middleware_local = auth_middleware.clone();
             let handle_local = handle.clone();
 
             accept_async(stream)

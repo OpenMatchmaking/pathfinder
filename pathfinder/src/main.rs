@@ -8,7 +8,6 @@ extern crate futures;
 extern crate fern;
 #[macro_use]
 extern crate json;
-extern crate jsonwebtoken;
 extern crate lapin_futures_rustls;
 extern crate lapin_futures_tls_api;
 extern crate lapin_futures_tls_internal;
@@ -21,11 +20,7 @@ extern crate tokio_tcp;
 extern crate tokio_tls_api;
 extern crate tokio_tungstenite;
 extern crate tungstenite;
-#[macro_use]
-extern crate redis_async;
 extern crate serde;
-#[macro_use]
-extern crate serde_derive;
 extern crate structopt;
 #[macro_use]
 extern crate structopt_derive;
