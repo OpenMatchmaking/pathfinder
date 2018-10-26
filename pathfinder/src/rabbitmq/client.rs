@@ -6,7 +6,6 @@ use std::io;
 use amq_protocol::uri::{AMQPUri};
 use futures::{IntoFuture};
 use futures::future::{Future};
-use lapin_futures_rustls::{AMQPConnectionRustlsExt};
 use lapin_futures_rustls::lapin::channel::{Channel, ConfirmSelectOptions};
 use lapin_futures_rustls::lapin::client::{Client, ConnectionOptions};
 use tokio::executor::{spawn};
