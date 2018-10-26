@@ -127,14 +127,12 @@ impl Engine {
 
                 let event_name = message["event-name"].as_str().unwrap_or("null");
 
-                let basic_properties = BasicProperties {
-                    content_type: Some("application/json".to_string()),
-                    headers: Some(message_headers),                       // Headers for the message
-                    delivery_mode: Some(2),                               // Message must be persistent
-                    reply_to: Some(queue_name_response.to_string()),      // Response queue
-                    correlation_id: Some(event_name.clone().to_string()), // Event name
-                    ..Default::default()
-                };
+                let basic_properties = BasicProperties::default()
+                    .with_content_type("application/json".to_string())    // Content type
+                    .with_headers(message_headers)                        // Headers for the message
+                    .with_delivery_mode(2)                                // Message must be persistent
+                    .with_reply_to(queue_name_response.to_string())       // Response queue
+                    .with_correlation_id(event_name.clone().to_string()); // Event name
 
                 channel.basic_publish(
                     &endpoint_publish.get_request_exchange(),
