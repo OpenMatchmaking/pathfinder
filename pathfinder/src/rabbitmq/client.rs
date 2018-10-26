@@ -21,7 +21,7 @@ pub type LapinClient = Client<TcpStream>;
 /// Alias for the lapin channel.
 pub type LapinChannel = Channel<TcpStream>;
 /// Alias for generic future for pathfinder and RabbitMQ.
-pub type RabbitMQFuture = Box<Future<Item=(), Error=PathfinderError> + 'static>;
+pub type RabbitMQFuture = Box<Future<Item=(), Error=PathfinderError> + Send + Sync + 'static>;
 
 
 /// A future-based asynchronous RabbitMQ client.
