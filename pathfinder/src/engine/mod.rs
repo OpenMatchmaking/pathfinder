@@ -8,9 +8,8 @@
 pub mod router;
 pub mod serializer;
 
-use std::rc::{Rc};
-use std::str::{from_utf8};
 use std::sync::{Arc, RwLock};
+use std::str::{from_utf8};
 use std::vec::{Vec};
 
 use json::{parse as json_parse};
@@ -71,7 +70,7 @@ impl Engine {
         let endpoint_publish = endpoint.clone();
         let endpoint_unbind = endpoint.clone();
 
-        let queue_name = Rc::new(format!("{}", Uuid::new_v4()));
+        let queue_name = Arc::new(format!("{}", Uuid::new_v4()));
         let queue_name_bind = queue_name.clone();
         let queue_name_response = queue_name.clone();
         let queue_name_consumer = queue_name.clone();
@@ -166,7 +165,7 @@ impl Engine {
             // 6. Prepare a response for a client, serialize and sent via WebSocket transmitter
             .and_then(move |(channel, queue, message)| {
                 let raw_data = from_utf8(&message.data).unwrap();
-                let json = Rc::new(Box::new(json_parse(raw_data).unwrap()));
+                let json = Arc::new(Box::new(json_parse(raw_data).unwrap()));
                 let serializer = Serializer::new();
                 let response = serializer.serialize(json.dump()).unwrap();
                 transmitter.unbounded_send(response).unwrap();
