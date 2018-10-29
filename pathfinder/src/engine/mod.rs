@@ -65,7 +65,9 @@ impl Engine {
         let message_nested = message.clone();
         let url = message_nested["url"].as_str().unwrap();
 
-        let endpoint = self.router.clone().read().unwrap().match_url_or_default(&url).read().unwrap();
+        let router_local = self.router.clone();
+        let matched_endpoint = router_local.read().unwrap().match_url_or_default(&url);
+        let endpoint = matched_endpoint.read().unwrap();
         let endpoint_link = endpoint.clone();
         let endpoint_publish = endpoint.clone();
         let endpoint_unbind = endpoint.clone();
@@ -78,7 +80,8 @@ impl Engine {
         let queue_name_delete = queue_name.clone();
 
         let request_headers = self.prepare_request_headers(&message_nested, endpoint.clone());
-        let channel = rabbitmq_client.clone().read().unwrap().get_channel();
+        let rabbitmq_client_local = rabbitmq_client.clone();
+        let channel = rabbitmq_client_local.read().unwrap().get_channel();
 
         Box::new(
             // 1. Create a channel
