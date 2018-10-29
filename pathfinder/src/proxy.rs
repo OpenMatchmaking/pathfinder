@@ -71,7 +71,7 @@ impl Proxy {
         let auth_middleware = self.auth_middleware.clone();
 
         let rabbitmq_client_init = rabbitmq_client.clone();
-        let init = future::lazy(|| -> FutureResult<(), PathfinderError> {
+        let init = future::lazy(move || -> FutureResult<(), PathfinderError> {
             rabbitmq_client_init.write().unwrap().init();
             future::ok::<(), PathfinderError>(())
         });
@@ -88,25 +88,29 @@ impl Proxy {
             accept_async(stream)
                 // Process the messages
                 .and_then(move |ws_stream| {
+                    let connection_for_insert = connections_local.clone();
+                    let connection_for_remove = connections_local.clone();
+                    let connections_inner = connections_local.clone();
+
                     // Create a channel for the stream, which other sockets will use to
                     // send us messages. It could be used for broadcasting your data to
                     // another users in the future.
                     let (tx, rx) = mpsc::unbounded();
-                    connections_local.lock().unwrap().insert(addr, tx);
+                    connection_for_insert.lock().unwrap().insert(addr, tx);
 
                     // Split the WebSocket stream so that it will be possible to work
                     // with the reading and writing halves separately.
                     let (sink, stream) = ws_stream.split();
 
                     // Read and process each message
-                    let connections_inner = connections_local.clone();
                     let ws_reader = stream.for_each(move |message: Message| {
 
                         // Get references to required components
                         let addr_nested = addr.clone();
                         let engine_nested = engine_local.clone();
                         let connections_nested = connections_inner.clone();
-                        let transmitter_nested = &connections_nested.clone().lock().unwrap()[&addr_nested];
+                        let connections_for_transmitter = connections_inner.clone();
+                        let transmitter_nested = &connections_for_transmitter.lock().unwrap()[&addr_nested];
                         let transmitter_nested2 = transmitter_nested.clone();
 
                         // 1. Deserialize message into JSON
@@ -154,7 +158,7 @@ impl Proxy {
 
                     // Close the connection after using
                     spawn(connection.then(move |_| {
-                        connections_inner.lock().unwrap().remove(&addr);
+                        connection_for_remove.lock().unwrap().remove(&addr);
                         debug!("Connection {} closed.", addr);
                         Ok(())
                     }));
