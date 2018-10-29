@@ -37,9 +37,6 @@ pub mod proxy;
 pub mod rabbitmq;
 
 use cli::{CliOptions};
-use config::{get_config};
-use engine::{Engine};
-use engine::router::{Router, extract_endpoints};
 use structopt::StructOpt;
 use logging::{setup_logger};
 use proxy::{Proxy};
@@ -52,12 +49,7 @@ fn main() {
         Err(err) => println!("Logger isn't instantiated: {}", err)
     };
 
-    let config = get_config(&cli.config);
-    let endpoints = extract_endpoints(config);
-    let router = Box::new(Router::new(endpoints));
-    let engine = Box::new(Engine::new(&cli, router));
-
-    let proxy = Box::new(Proxy::new(&cli, engine));
+    let proxy = Box::new(Proxy::new(&cli));
     let address = format!("{}:{}", cli.ip, cli.port).parse().unwrap();
     proxy.run(address);
 }

@@ -14,13 +14,12 @@ use std::error::{Error};
 use std::net::{SocketAddr};
 use std::sync::{Arc, Mutex, RwLock};
 
+use amq_protocol::uri::{AMQPUri};
 use cli::{CliOptions};
 use futures::sync::{mpsc};
 use futures::{Future, Sink};
-use futures::future::{self, FutureResult};
 use futures::stream::{Stream};
 use tokio::net::{TcpListener};
-use tokio::reactor::{Handle};
 use tokio::runtime::{run};
 use tokio_current_thread::{spawn};
 use tokio_tungstenite::{accept_async};
@@ -30,13 +29,14 @@ use auth::middleware::{Middleware, EmptyMiddleware};
 use auth::token::middleware::{JwtTokenMiddleware};
 use engine::{Engine};
 use error::{PathfinderError};
-use rabbitmq::{RabbitMQClient};
+use rabbitmq::client::{RabbitMQClient};
+use rabbitmq::utils::{get_uri};
 
 
 /// A reverse proxy application.
 pub struct Proxy {
     engine: Arc<RwLock<Box<Engine>>>,
-    rabbitmq_client: Arc<RwLock<Box<RabbitMQClient>>>,
+    amqp_uri: Arc<AMQPUri>,
     connections: Arc<Mutex<HashMap<SocketAddr, mpsc::UnboundedSender<Message>>>>,
     auth_middleware: Arc<RwLock<Box<Middleware>>>,
 }
@@ -44,16 +44,17 @@ pub struct Proxy {
 
 impl Proxy {
     /// Returns a new instance of a reverse proxy application.
-    pub fn new(cli: &CliOptions, engine: Box<Engine>) -> Proxy {
+    pub fn new(cli: &CliOptions) -> Proxy {
+        let engine = Box::new(Engine::new(cli));
+        let amqp_uri = get_uri(cli);
         let auth_middleware: Box<Middleware> = match cli.validate {
             true => Box::new(JwtTokenMiddleware::new(cli)),
             _ => Box::new(EmptyMiddleware::new(cli))
         };
-        let rabbitmq_client = Box::new(RabbitMQClient::new(cli));
 
         Proxy {
             engine: Arc::new(RwLock::new(engine)),
-            rabbitmq_client: Arc::new(RwLock::new(rabbitmq_client)),
+            amqp_uri: Arc::new(amqp_uri),
             connections: Arc::new(Mutex::new(HashMap::new())),
             auth_middleware: Arc::new(RwLock::new(auth_middleware)),
         }
@@ -61,121 +62,132 @@ impl Proxy {
 
     /// Run the server on the specified address and port.
     pub fn run(&self, address: SocketAddr) {
-        let handle = Handle::default();
         let listener = TcpListener::bind(&address).unwrap();
-        println!("Listening on: {}", address);
+        info!("Listening on: {}", address);
 
         let engine = self.engine.clone();
-        let rabbitmq_client = self.rabbitmq_client.clone();
         let connections = self.connections.clone();
         let auth_middleware = self.auth_middleware.clone();
 
-        let rabbitmq_client_init = rabbitmq_client.clone();
-        let init = future::lazy(move || -> FutureResult<(), PathfinderError> {
-            rabbitmq_client_init.write().unwrap().init();
-            future::ok::<(), PathfinderError>(())
-        });
+        let server = |rabbitmq: Arc<RabbitMQClient>| {
+            listener.incoming().for_each(move |stream| {
+                let addr = stream.peer_addr().expect("Connected stream should have a peer address.");
 
-        let server = listener.incoming().for_each(move |stream| {
-            let addr = stream.peer_addr().expect("Connected stream should have a peer address.");
+                let engine_local = engine.clone();
+                let rabbimq_local = rabbitmq.clone();
+                let connections_local = connections.clone();
+                let auth_middleware_local = auth_middleware.clone();
 
-            let engine_local = engine.clone();
-            let rabbimq_local = rabbitmq_client.clone();
-            let connections_local = connections.clone();
-            let auth_middleware_local = auth_middleware.clone();
-            let handle_local = handle.clone();
+                accept_async(stream)
+                    // Process the messages
+                    .and_then(move |ws_stream| {
+                        let connection_for_insert = connections_local.clone();
+                        let connection_for_remove = connections_local.clone();
+                        let connections_inner = connections_local.clone();
 
-            accept_async(stream)
-                // Process the messages
-                .and_then(move |ws_stream| {
-                    let connection_for_insert = connections_local.clone();
-                    let connection_for_remove = connections_local.clone();
-                    let connections_inner = connections_local.clone();
+                        // Create a channel for the stream, which other sockets will use to
+                        // send us messages. It could be used for broadcasting your data to
+                        // another users in the future.
+                        let (tx, rx) = mpsc::unbounded();
+                        connection_for_insert.lock().unwrap().insert(addr, tx);
 
-                    // Create a channel for the stream, which other sockets will use to
-                    // send us messages. It could be used for broadcasting your data to
-                    // another users in the future.
-                    let (tx, rx) = mpsc::unbounded();
-                    connection_for_insert.lock().unwrap().insert(addr, tx);
+                        // Split the WebSocket stream so that it will be possible to work
+                        // with the reading and writing halves separately.
+                        let (sink, stream) = ws_stream.split();
 
-                    // Split the WebSocket stream so that it will be possible to work
-                    // with the reading and writing halves separately.
-                    let (sink, stream) = ws_stream.split();
+                        // Read and process each message
+                        let ws_reader = stream.for_each(move |message: Message| {
 
-                    // Read and process each message
-                    let ws_reader = stream.for_each(move |message: Message| {
+                            // Get references to required components
+                            let addr_nested = addr.clone();
+                            let engine_nested = engine_local.clone();
+                            let connections_nested = connections_inner.clone();
+                            let connections_for_transmitter = connections_inner.clone();
+                            let transmitter_nested = &connections_for_transmitter.lock().unwrap()[&addr_nested];
+                            let transmitter_nested2 = transmitter_nested.clone();
 
-                        // Get references to required components
-                        let addr_nested = addr.clone();
-                        let engine_nested = engine_local.clone();
-                        let connections_nested = connections_inner.clone();
-                        let connections_for_transmitter = connections_inner.clone();
-                        let transmitter_nested = &connections_for_transmitter.lock().unwrap()[&addr_nested];
-                        let transmitter_nested2 = transmitter_nested.clone();
+                            // 1. Deserialize message into JSON
+                            let json_message = match engine_local.read().unwrap().deserialize_message(&message) {
+                                Ok(json_message) => json_message,
+                                Err(error) => {
+                                    let formatted_error = format!("{}", error);
+                                    let error_message = engine_nested.read().unwrap().wrap_an_error(formatted_error.as_str());
+                                    transmitter_nested.unbounded_send(error_message).unwrap();
+                                    return Ok(())
+                                }
+                            };
 
-                        // 1. Deserialize message into JSON
-                        let json_message = match engine_local.read().unwrap().deserialize_message(&message) {
-                            Ok(json_message) => json_message,
-                            Err(err) => {
-                                let formatted_error = format!("{}", err);
-                                let error_message = engine_nested.read().unwrap().wrap_an_error(formatted_error.as_str());
-                                transmitter_nested.unbounded_send(error_message).unwrap();
-                                return Ok(())
-                            }
-                        };
+                            // 2. Apply a middleware to each incoming message
+                            let auth_future = auth_middleware_local.read().unwrap()
+                                .process_request(json_message.clone());
 
-                        // 2. Apply a middleware to each incoming message
-                        let auth_future = auth_middleware_local.read().unwrap()
-                            .process_request(json_message.clone());
+                            // 3. Put request into a queue in RabbitMQ and receive the response
+                            let rabbitmq_future = engine_local.read().unwrap().handle(
+                                json_message.clone(), transmitter_nested.clone(), rabbimq_local.clone()
+                            );
 
-                        // 3. Put request into a queue in RabbitMQ and receive the response
-                        let rabbitmq_future = engine_local.read().unwrap().handle(
-                            json_message.clone(), transmitter_nested.clone(), rabbimq_local.clone()
-                        );
+                            let processing_request_future = auth_future
+                                .and_then(move |_| rabbitmq_future)
+                                .map_err(move |error| {
+                                    let formatted_error = format!("{}", error);
+                                    let error_message = engine_nested.read().unwrap().wrap_an_error(formatted_error.as_str());
+                                    transmitter_nested2.unbounded_send(error_message).unwrap();
+                                    ()
+                                });
 
-                        let processing_request_future = auth_future
-                            .and_then(move |_| rabbitmq_future)
-                            .map_err(move |err| {
-                                let formatted_error = format!("{}", err);
-                                let error_message = engine_nested.read().unwrap().wrap_an_error(formatted_error.as_str());
-                                transmitter_nested2.unbounded_send(error_message).unwrap();
-                                ()
-                            });
+                            spawn(processing_request_future);
+                            Ok(())
+                        });
 
-                        spawn(processing_request_future);
+                        // Write back prepared responses
+                        let ws_writer = rx.fold(sink, |mut sink, msg| {
+                            sink.start_send(msg).unwrap();
+                            Ok(sink)
+                        });
+
+                        // Wait for either half to be done to tear down the other
+                        let connection = ws_reader.map(|_| ()).map_err(|_| ())
+                            .select(ws_writer.map(|_| ()).map_err(|_| ()));
+
+                        // Close the connection after using
+                        spawn(connection.then(move |_| {
+                            connection_for_remove.lock().unwrap().remove(&addr);
+                            debug!("Connection {} closed.", addr);
+                            Ok(())
+                        }));
+
                         Ok(())
-                    });
-
-                    // Write back prepared responses
-                    let ws_writer = rx.fold(sink, |mut sink, msg| {
-                        sink.start_send(msg).unwrap();
-                        Ok(sink)
-                    });
-
-                    // Wait for either half to be done to tear down the other
-                    let connection = ws_reader.map(|_| ()).map_err(|_| ())
-                        .select(ws_writer.map(|_| ()).map_err(|_| ()));
-
-                    // Close the connection after using
-                    spawn(connection.then(move |_| {
-                        connection_for_remove.lock().unwrap().remove(&addr);
-                        debug!("Connection {} closed.", addr);
+                    })
+                    // An error occurred during the WebSocket handshake
+                    .or_else(|error| {
+                        debug!("{}", error.description());
                         Ok(())
-                    }));
-
-                    Ok(())
-                })
-                // An error occurred during the WebSocket handshake
-                .or_else(|err| {
-                    debug!("{}", err.description());
-                    Ok(())
-                })
-        });
+                    })
+            })
+        };
 
         // Run the server
-        let server_future = init
-            .map_err(|_err| ())
-            .and_then(|_| server.map_err(|_err| ()));
+        let server_future = self.get_rabbitmq_client()
+            .map_err(|error| {
+                error!("Lapin error: {:?}", error);
+                ()
+            })
+            .and_then(|rabbitmq: Arc<RabbitMQClient>| {
+                server(rabbitmq)
+                    .map_err(|_error| ())
+            });
         run(server_future);
+    }
+
+    fn get_rabbitmq_client(&self)
+        -> impl Future<Item=Arc<RabbitMQClient>, Error=PathfinderError> + Sync + Send + 'static
+    {
+        let amqp_uri = self.amqp_uri.clone();
+        RabbitMQClient::connect(amqp_uri.as_ref())
+            .map(|client| Arc::new(client))
+            .map_err(|error| {
+                error!("Error in RabbitMQ Client. Reason: {:?}", error);
+                PathfinderError::Io(error)
+            })
     }
 }

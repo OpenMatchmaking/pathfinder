@@ -29,11 +29,11 @@ use lapin_futures_rustls::lapin::channel::{
 use tungstenite::{Message};
 use uuid::{Uuid};
 
-pub use self::router::{Router, Endpoint, extract_endpoints};
+pub use self::router::{Router, Endpoint, extract_endpoints, ReadOnlyEndpoint};
 pub use self::serializer::{Serializer, JsonMessage};
 
-use self::router::endpoint::{ReadOnlyEndpoint};
 use super::cli::{CliOptions};
+use super::config::{get_config};
 use super::error::{Result, PathfinderError};
 use super::rabbitmq::{RabbitMQClient, RabbitMQFuture};
 
@@ -50,7 +50,11 @@ pub struct Engine {
 
 impl Engine {
     /// Returns a new instance of `Engine`.
-    pub fn new(cli: &CliOptions, router: Box<Router>) -> Engine {
+    pub fn new(cli: &CliOptions) -> Engine {
+        let config = get_config(&cli.config);
+        let endpoints = extract_endpoints(config);
+        let router = Box::new(Router::new(endpoints));
+
         Engine {
             router: Arc::new(RwLock::new(router))
         }
@@ -61,7 +65,7 @@ impl Engine {
     pub fn handle(&self,
                   message: JsonMessage,
                   transmitter: MessageSender,
-                  rabbitmq_client: Arc<RwLock<Box<RabbitMQClient>>>
+                  rabbitmq_client: Arc<RabbitMQClient>
     ) -> RabbitMQFuture {
         let message_nested = message.clone();
         let url = message_nested["url"].as_str().unwrap();
@@ -82,7 +86,7 @@ impl Engine {
 
         let request_headers = self.prepare_request_headers(&message_nested, endpoint.clone());
         let rabbitmq_client_local = rabbitmq_client.clone();
-        let channel = rabbitmq_client_local.read().unwrap().get_channel();
+        let channel = rabbitmq_client_local.get_channel();
 
         Box::new(
             // 1. Create a channel
