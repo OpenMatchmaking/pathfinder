@@ -16,7 +16,7 @@ pub use self::endpoint::{
 
 use std::collections::{HashMap};
 use std::clone::{Clone};
-use std::sync::{RwLock};
+use std::sync::{Arc};
 
 use super::super::error::{Result, PathfinderError};
 
@@ -91,7 +91,10 @@ impl Router {
     /// Returns an endpoint that was found for a passed URL.
     pub fn match_url(&self, url: &str) -> Result<ReadOnlyEndpoint> {
         match self.endpoints.contains_key(url) {
-            true => Ok(self.endpoints[url]),
+            true => {
+                let endpoint = self.endpoints[url].clone();
+                Ok(endpoint)
+            },
             false => Err(PathfinderError::EndpointNotFound(url.to_string()))
         }
     }
@@ -104,7 +107,7 @@ impl Router {
             Err(_) => {
                 let url = url.to_string();
                 let microservice = self.convert_url_into_microservice(&url);
-                RwLock::new(Box::new(Endpoint::new(&url, &microservice, REQUEST_EXCHANGE, RESPONSE_EXCHANGE)))
+                Arc::new(Endpoint::new(&url, &microservice, REQUEST_EXCHANGE, RESPONSE_EXCHANGE))
             }
         }
     }

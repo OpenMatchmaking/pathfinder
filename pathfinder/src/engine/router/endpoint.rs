@@ -4,7 +4,7 @@
 extern crate config;
 
 use std::collections::{HashMap, HashSet};
-use std::sync::{RwLock};
+use std::sync::{Arc};
 
 use error::{PathfinderError};
 use self::config::{Config, Value};
@@ -15,7 +15,7 @@ pub const REQUEST_EXCHANGE: &'static str = "open-matchmaking.direct";
 /// Default AMQP exchange point for responses
 pub const RESPONSE_EXCHANGE: &'static str = "open-matchmaking.responses.direct";
 /// Type alias for thread-safe endpoint (only for read-only access)
-pub type ReadOnlyEndpoint = RwLock<Box<Endpoint>>;
+pub type ReadOnlyEndpoint = Arc<Endpoint>;
 
 /// A struct which stores an original URL that must be converted to the
 /// certain microservice endpoint.
@@ -130,7 +130,7 @@ pub fn extract_endpoints(conf: Box<Config>) -> HashMap<String, ReadOnlyEndpoint>
         let microservice = get_value_from_config_as_str(&configuration, "microservice", "");
         let request_exchange = get_value_from_config_as_str(&configuration, "request_exchange", &default_request_exchange);
         let response_exchange = get_value_from_config_as_str(&configuration, "response_exchange", &default_response_exchange);
-        let endpoint = RwLock::new(Box::new(Endpoint::new(&url, &microservice, &request_exchange, &response_exchange)));
+        let endpoint = Arc::new(Endpoint::new(&url, &microservice, &request_exchange, &response_exchange));
         endpoints.insert(url, endpoint);
     }
 

@@ -32,6 +32,7 @@ use uuid::{Uuid};
 pub use self::router::{Router, Endpoint, extract_endpoints};
 pub use self::serializer::{Serializer, JsonMessage};
 
+use self::router::endpoint::{ReadOnlyEndpoint};
 use super::cli::{CliOptions};
 use super::error::{Result, PathfinderError};
 use super::rabbitmq::{RabbitMQClient, RabbitMQFuture};
@@ -67,7 +68,7 @@ impl Engine {
 
         let router_local = self.router.clone();
         let matched_endpoint = router_local.read().unwrap().match_url_or_default(&url);
-        let endpoint = matched_endpoint.read().unwrap();
+        let endpoint = matched_endpoint.clone();
         let endpoint_link = endpoint.clone();
         let endpoint_publish = endpoint.clone();
         let endpoint_unbind = endpoint.clone();
@@ -236,7 +237,7 @@ impl Engine {
     }
 
     /// Prepares a list of key-value pairs for headers in message.
-    fn prepare_request_headers(&self, json: &JsonMessage, endpoint: Box<Endpoint>) -> Box<Vec<(String, String)>> {
+    fn prepare_request_headers(&self, json: &JsonMessage, endpoint: ReadOnlyEndpoint) -> Box<Vec<(String, String)>> {
         Box::new(vec![
             (String::from("Microservice-Name"), endpoint.get_microservice()),
             (String::from("Request-URI"), endpoint.get_url()),
