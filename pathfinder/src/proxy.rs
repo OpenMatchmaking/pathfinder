@@ -25,17 +25,18 @@ use tungstenite::protocol::{Message};
 
 use auth::middleware::{Middleware, EmptyMiddleware};
 use auth::token::middleware::{JwtTokenMiddleware};
-use engine::{Engine};
+use engine::{Engine, MessageSender};
 use error::{PathfinderError};
 use rabbitmq::client::{RabbitMQClient};
 use rabbitmq::utils::{get_uri};
+use utils::{deserialize_message, wrap_an_error};
 
 
 /// A reverse proxy application.
 pub struct Proxy {
     engine: Arc<Engine>,
     amqp_uri: Arc<AMQPUri>,
-    connections: Arc<Mutex<HashMap<SocketAddr, mpsc::UnboundedSender<Message>>>>,
+    connections: Arc<Mutex<HashMap<SocketAddr, MessageSender>>>,
     auth_middleware: Arc<Box<Middleware>>,
 }
 
@@ -98,17 +99,16 @@ impl Proxy {
 
                             // Get references to required components
                             let addr_nested = addr.clone();
-                            let engine_nested = engine_local.clone();
                             let connections_nested = connections_inner.clone();
                             let transmitter_nested = &connections_nested.lock().unwrap()[&addr_nested];
                             let transmitter_nested2 = transmitter_nested.clone();
 
                             // 1. Deserialize message into JSON
-                            let json_message = match engine_local.deserialize_message(&message) {
+                            let json_message = match deserialize_message(&message) {
                                 Ok(json_message) => json_message,
                                 Err(error) => {
                                     let formatted_error = format!("{}", error);
-                                    let error_message = engine_nested.wrap_an_error(formatted_error.as_str());
+                                    let error_message = wrap_an_error(formatted_error.as_str());
                                     transmitter_nested.unbounded_send(error_message).unwrap();
                                     return Ok(())
                                 }
@@ -119,14 +119,16 @@ impl Proxy {
 
                             // 3. Put request into a queue in RabbitMQ and receive the response
                             let rabbitmq_future = engine_local.handle(
-                                json_message.clone(), transmitter_nested.clone(), rabbimq_local.clone()
+                                json_message.clone(),
+                                transmitter_nested.clone(),
+                                rabbimq_local.clone()
                             );
 
                             let processing_request_future = auth_future
                                 .and_then(move |_| rabbitmq_future)
                                 .map_err(move |error| {
                                     let formatted_error = format!("{}", error);
-                                    let error_message = engine_nested.wrap_an_error(formatted_error.as_str());
+                                    let error_message = wrap_an_error(formatted_error.as_str());
                                     transmitter_nested2.unbounded_send(error_message).unwrap();
                                     ()
                                 });

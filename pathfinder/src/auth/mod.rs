@@ -6,4 +6,3 @@ pub mod token;
 
 pub use self::middleware::{MiddlewareFuture, Middleware, EmptyMiddleware};
 pub use auth::token::middleware::{JwtTokenMiddleware};
-pub use engine::serializer::{JsonMessage};

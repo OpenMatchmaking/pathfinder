@@ -1,13 +1,12 @@
 //! Middleware interfaces for the pathfinder project
 //!
 
-use super::super::error::{PathfinderError};
-use super::super::engine::serializer::{JsonMessage};
-
 use cli::{CliOptions};
 use futures::{Future};
 use futures::future::{lazy};
 
+use error::{PathfinderError};
+use serializer::{JsonMessage};
 
 /// Type alias for future result type.
 pub type MiddlewareFuture = Box<Future<Item=(), Error=PathfinderError> + Sync + Send + 'static>;

@@ -32,6 +32,8 @@ pub mod error;
 pub mod logging;
 pub mod proxy;
 pub mod rabbitmq;
+pub mod serializer;
+pub mod utils;
 
 use cli::{CliOptions};
 use structopt::StructOpt;

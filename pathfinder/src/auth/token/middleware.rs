@@ -5,7 +5,7 @@ use cli::{CliOptions};
 use futures::future::{lazy};
 
 use auth::middleware::{Middleware, MiddlewareFuture};
-use engine::serializer::{JsonMessage};
+use serializer::{JsonMessage};
 
 
 /// A middleware class, that will check a JSON Web Token in WebSocket message.

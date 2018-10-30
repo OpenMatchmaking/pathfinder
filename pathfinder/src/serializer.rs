@@ -1,4 +1,4 @@
-//! Serializer and deserializer structure for a data
+//! Serializer and deserializer structure for a data.
 //!
 //! This module is intended for transforming incoming data (which are
 //! `tungstenite::Message` objects) to JSON objects and preparing responses
@@ -7,10 +7,10 @@
 
 use std::sync::{Arc};
 
-use super::super::error::{Result, PathfinderError};
+use error::{Result, PathfinderError};
 
 use json::{parse as parse_json, JsonValue};
-use tungstenite::{Message};
+use tungstenite::protocol::{Message};
 
 
 /// Type alias for JSON object
@@ -33,7 +33,7 @@ pub type JsonMessage = Arc<Box<JsonValue>>;
 /// println!("{:?}", instance.serialize(response))
 /// ```
 ///
-/// Derializing a message to JSON object:
+/// Deserializing a message to JSON object:
 ///
 /// ```
 /// use engine::{Serializer};
@@ -45,8 +45,7 @@ pub type JsonMessage = Arc<Box<JsonValue>>;
 /// println!("{:?}", instance.deserialize(&message))
 /// ```
 ///
-pub struct Serializer {
-}
+pub struct Serializer;
 
 
 impl Serializer {

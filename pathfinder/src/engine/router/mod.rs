@@ -18,7 +18,7 @@ use std::collections::{HashMap};
 use std::clone::{Clone};
 use std::sync::{Arc};
 
-use super::super::error::{Result, PathfinderError};
+use error::{Result, PathfinderError};
 
 
 /// A struct which is stores a mapping of resources that can be
