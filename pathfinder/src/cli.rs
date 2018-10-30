@@ -72,26 +72,6 @@ pub struct CliOptions {
                 default_value = "password")]
     pub rabbitmq_password: String,
 
-    #[structopt(long = "redis-host",
-                help = "The used host by Redis",
-                default_value = "127.0.0.1")]
-    pub redis_host: String,
-
-    #[structopt(long = "redis-port",
-                help = "The listened port by Redis",
-                default_value = "6379")]
-    pub redis_port: u16,
-
-    #[structopt(long = "redis-password",
-                help = "Password for connecting to redis",
-                default_value = "")]
-    pub redis_password: String,
-
-    #[structopt(long = "jwt-secret",
-                help = "Secret key for a JWT validation",
-                default_value = "secret")]
-    pub jwt_secret_key: String,
-
     #[structopt(long = "ssl-cert",
                 help = "Path to a SSL certificate",
                 default_value = "")]
