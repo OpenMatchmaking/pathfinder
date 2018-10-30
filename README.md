@@ -27,10 +27,6 @@ OPTIONS:
         --rabbitmq-virtual-host <rabbitmq_virtual_host>    The virtual host of a RabbitMQ node [default: vhost]
         --rabbitmq-user <rabbitmq_username>                A RabbitMQ application username [default: user]
         --rabbitmq-password <rabbitmq_password>            A RabbitMQ application password [default: password]
-        --redis-host <redis_host>                          The used host by Redis [default: 127.0.0.1]
-        --redis-port <redis_port>                          The listened port by Redis [default: 6379]
-        --redis-password <redis_password>                  Password for connecting to redis [default: ]
-        --jwt-secret <jwt_secret_key>                      Secret key for a JWT validation [default: secret]
         --ssl-cert <ssl_certificate>                       Path to a SSL certificate [default: ]
         --ssl-key <ssl_public_key>                         Path to a SSL public key [default: ]
 ```

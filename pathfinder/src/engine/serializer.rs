@@ -5,7 +5,7 @@
 //! for client before sending through transmitters.
 //!
 
-use std::rc::{Rc};
+use std::sync::{Arc};
 
 use super::super::error::{Result, PathfinderError};
 
@@ -14,7 +14,7 @@ use tungstenite::{Message};
 
 
 /// Type alias for JSON object
-pub type JsonMessage = Rc<Box<JsonValue>>;
+pub type JsonMessage = Arc<Box<JsonValue>>;
 
 /// A specialized struct for deserializing incoming messages into JSON and
 /// serializing responses into `tungstenite::Message` objects, so, that they
@@ -85,7 +85,7 @@ impl Serializer {
     /// Parses a UTF-8 string and converts it into JSON object.
     fn parse_into_json(&self, message: &str) -> Result<JsonMessage> {
         match parse_json(message) {
-            Ok(message) => Ok(Rc::new(Box::new(message))),
+            Ok(message) => Ok(Arc::new(Box::new(message))),
             Err(err) => {
                 let formatted_message = format!("{}", err);
                 return Err(PathfinderError::DecodingError(formatted_message))

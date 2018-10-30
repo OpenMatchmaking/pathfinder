@@ -6,11 +6,17 @@
 
 pub mod endpoint;
 
-pub use self::endpoint::{Endpoint, extract_endpoints, REQUEST_EXCHANGE, RESPONSE_EXCHANGE};
+pub use self::endpoint::{
+    REQUEST_EXCHANGE,
+    RESPONSE_EXCHANGE,
+    ReadOnlyEndpoint,
+    Endpoint,
+    extract_endpoints,
+};
 
 use std::collections::{HashMap};
 use std::clone::{Clone};
-use std::rc::{Rc};
+use std::sync::{Arc};
 
 use super::super::error::{Result, PathfinderError};
 
@@ -70,35 +76,38 @@ use super::super::error::{Result, PathfinderError};
 /// ```
 ///
 pub struct Router {
-    endpoints: HashMap<String, Rc<Box<Endpoint>>>
+    endpoints: HashMap<String, ReadOnlyEndpoint>
 }
 
 
 impl Router {
     /// Returns a new instance of `Router` that contains a mapping for resources.
-    pub fn new(endpoints: HashMap<String, Rc<Box<Endpoint>>>) -> Router {
+    pub fn new(endpoints: HashMap<String, ReadOnlyEndpoint>) -> Router {
         Router {
             endpoints: endpoints
         }
     }
 
     /// Returns an endpoint that was found for a passed URL.
-    pub fn match_url(&self, url: &str) -> Result<Rc<Box<Endpoint>>> {
+    pub fn match_url(&self, url: &str) -> Result<ReadOnlyEndpoint> {
         match self.endpoints.contains_key(url) {
-            true => Ok(self.endpoints[url].clone()),
+            true => {
+                let endpoint = self.endpoints[url].clone();
+                Ok(endpoint)
+            },
             false => Err(PathfinderError::EndpointNotFound(url.to_string()))
         }
     }
 
     /// Returns an endpoint for the matched URL. If wasn't found returns a processed
     /// URL as endpoint like in normal cases.
-    pub fn match_url_or_default(&self, url: &str) -> Rc<Box<Endpoint>> {
+    pub fn match_url_or_default(&self, url: &str) -> ReadOnlyEndpoint {
         match self.match_url(url) {
             Ok(endpoint) => endpoint,
             Err(_) => {
                 let url = url.to_string();
                 let microservice = self.convert_url_into_microservice(&url);
-                Rc::new(Box::new(Endpoint::new(&url, &microservice, REQUEST_EXCHANGE, RESPONSE_EXCHANGE)))
+                Arc::new(Endpoint::new(&url, &microservice, REQUEST_EXCHANGE, RESPONSE_EXCHANGE))
             }
         }
     }
