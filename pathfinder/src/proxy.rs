@@ -20,8 +20,6 @@ use futures::sync::{mpsc};
 use futures::{Future, Sink};
 use futures::stream::{Stream};
 use tokio::net::{TcpListener};
-use tokio::runtime::{run};
-use tokio_current_thread::{spawn};
 use tokio_tungstenite::{accept_async};
 use tungstenite::protocol::{Message};
 
@@ -133,7 +131,7 @@ impl Proxy {
                                     ()
                                 });
 
-                            spawn(processing_request_future);
+                            tokio::spawn(processing_request_future);
                             Ok(())
                         });
 
@@ -148,7 +146,7 @@ impl Proxy {
                             .select(ws_writer.map(|_| ()).map_err(|_| ()));
 
                         // Close the connection after using
-                        spawn(connection.then(move |_| {
+                        tokio::spawn(connection.then(move |_| {
                             connection_for_remove.lock().unwrap().remove(&addr);
                             debug!("Connection {} closed.", addr);
                             Ok(())
@@ -174,7 +172,8 @@ impl Proxy {
                 server(rabbitmq)
                     .map_err(|_error| ())
             });
-        run(server_future);
+
+        tokio::runtime::run(server_future);
     }
 
     fn get_rabbitmq_client(&self)

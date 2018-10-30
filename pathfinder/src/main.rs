@@ -15,12 +15,9 @@ extern crate lapin_futures_tls_internal;
 extern crate log;
 extern crate tokio;
 extern crate tokio_io;
-extern crate tokio_current_thread;
 extern crate tokio_tcp;
-extern crate tokio_tls_api;
 extern crate tokio_tungstenite;
 extern crate tungstenite;
-extern crate serde;
 extern crate structopt;
 #[macro_use]
 extern crate structopt_derive;
