@@ -102,8 +102,7 @@ impl Proxy {
                             let addr_nested = addr.clone();
                             let engine_nested = engine_local.clone();
                             let connections_nested = connections_inner.clone();
-                            let connections_for_transmitter = connections_inner.clone();
-                            let transmitter_nested = &connections_for_transmitter.lock().unwrap()[&addr_nested];
+                            let transmitter_nested = &connections_nested.lock().unwrap()[&addr_nested];
                             let transmitter_nested2 = transmitter_nested.clone();
 
                             // 1. Deserialize message into JSON

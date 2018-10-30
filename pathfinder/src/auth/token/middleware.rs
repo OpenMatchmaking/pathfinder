@@ -22,7 +22,7 @@ impl JwtTokenMiddleware {
 
 
 impl Middleware for JwtTokenMiddleware {
-    fn process_request(&self, message: JsonMessage) -> MiddlewareFuture {
+    fn process_request(&self, _message: JsonMessage) -> MiddlewareFuture {
         Box::new(lazy(move || Ok(())))
     }
 }

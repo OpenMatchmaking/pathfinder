@@ -80,7 +80,6 @@ impl Engine {
         let queue_name = Arc::new(format!("{}", Uuid::new_v4()));
         let queue_name_bind = queue_name.clone();
         let queue_name_response = queue_name.clone();
-        let queue_name_consumer = queue_name.clone();
         let queue_name_unbind = queue_name.clone();
         let queue_name_delete = queue_name.clone();
 
@@ -180,7 +179,7 @@ impl Engine {
             })
 
             // 7. Unbind the response queue from the exchange point
-            .and_then(move |(channel, queue)| {
+            .and_then(move |(channel, _queue)| {
                channel.queue_unbind(
                    &queue_name_unbind,
                    &endpoint_unbind.get_response_exchange(),
