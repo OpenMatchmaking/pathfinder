@@ -95,12 +95,12 @@ impl Serializer {
     /// Validates a JSON object on required fields and values.
     fn validate_json(&self, json: JsonMessage) -> Result<JsonMessage> {
         if json["url"].is_null() {
-            let error_message = String::from("Key `url` is missing or value is `null`");
+            let error_message = String::from("The `url` field is missing or value is `null`");
             return Err(PathfinderError::DecodingError(error_message));
         }
 
         if json.has_key("microservice") {
-            let error_message = String::from("Key `microservice` must be not specified");
+            let error_message = String::from("The `microservice` field must not be specified");
             return Err(PathfinderError::DecodingError(error_message));
         }
 
@@ -178,7 +178,7 @@ mod tests {
         assert_eq!(result.is_err(), true);
         assert_eq!(
             format!("{}", result.unwrap_err()),
-            "Decoding error: Key `url` is missing or value is `null`"
+            "Decoding error: The `url` field is missing or value is `null`"
         )
     }
 
@@ -192,7 +192,7 @@ mod tests {
         assert_eq!(result.is_err(), true);
         assert_eq!(
             format!("{}", result.unwrap_err()),
-            "Decoding error: Key `url` is missing or value is `null`"
+            "Decoding error: The `url` field is missing or value is `null`"
         )
     }
 
@@ -206,7 +206,7 @@ mod tests {
         assert_eq!(result.is_err(), true);
         assert_eq!(
             format!("{}", result.unwrap_err()),
-            "Decoding error: Key `microservice` must be not specified"
+            "Decoding error: The `microservice` field must not be specified"
         )
     }
 }
