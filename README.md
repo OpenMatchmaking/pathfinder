@@ -3,7 +3,7 @@ An asynchronous WebSocket-over-RabbitMQ reverse proxy, based on the tokio and fu
 
 # Features
 - Configuring a behaviour of the reverse proxy via CLI options and YAML files
-- Working with Redis (in read-only mode) for validating a JSON Web Token for getting an access to microservices
+- Communicating with Auth/Auth microservice for validating a JSON Web Token for getting an access to other microservices
 - Transferring requests to the certain microservices via RabbitMQ queues and returning responses in JSON format
 
 # Usage
