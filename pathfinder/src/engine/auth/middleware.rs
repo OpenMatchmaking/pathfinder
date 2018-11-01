@@ -6,7 +6,7 @@ use futures::{Future};
 use futures::future::{lazy};
 
 use error::{PathfinderError};
-use serializer::{JsonMessage};
+use engine::serializer::{JsonMessage};
 
 /// Type alias for future result type.
 pub type MiddlewareFuture = Box<Future<Item=(), Error=PathfinderError> + Sync + Send + 'static>;

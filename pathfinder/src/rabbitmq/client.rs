@@ -13,15 +13,12 @@ use tokio::executor::{spawn};
 use tokio_tcp::{TcpStream};
 
 use super::utils::{get_address_to_rabbitmq};
-use super::super::error::{PathfinderError};
 
 
 /// Alias for the lapin client with TLS.
 pub type LapinClient = Client<TcpStream>;
 /// Alias for the lapin channel.
 pub type LapinChannel = Channel<TcpStream>;
-/// Alias for generic future for pathfinder and RabbitMQ.
-pub type RabbitMQFuture = Box<Future<Item=(), Error=PathfinderError> + Send + Sync + 'static>;
 
 
 /// A future-based asynchronous RabbitMQ client.

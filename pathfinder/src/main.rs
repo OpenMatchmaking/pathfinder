@@ -23,7 +23,6 @@ extern crate structopt;
 extern crate structopt_derive;
 extern crate uuid;
 
-pub mod auth;
 pub mod cli;
 pub mod config;
 #[macro_use]
@@ -32,8 +31,6 @@ pub mod error;
 pub mod logging;
 pub mod proxy;
 pub mod rabbitmq;
-pub mod serializer;
-pub mod utils;
 
 use cli::{CliOptions};
 use structopt::StructOpt;

@@ -6,7 +6,6 @@ pub mod utils;
 pub use self::client::{
     LapinClient,
     LapinChannel,
-    RabbitMQFuture,
     RabbitMQClient,
 };
 pub use self::utils::{

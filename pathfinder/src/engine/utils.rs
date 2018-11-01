@@ -3,7 +3,7 @@
 
 use tungstenite::protocol::{Message};
 
-use super::error::{Result};
+use super::super::error::{Result};
 use super::serializer::{Serializer, JsonMessage};
 
 

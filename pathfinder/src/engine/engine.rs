@@ -11,7 +11,7 @@ use std::vec::{Vec};
 
 use json::{parse as json_parse};
 use futures::{Stream};
-use futures::future::{Future};
+use futures::future::{Future, lazy};
 use futures::sync::{mpsc};
 use lapin_futures_rustls::lapin::types::{AMQPValue, FieldTable};
 use lapin_futures_rustls::lapin::channel::{
@@ -29,18 +29,27 @@ use uuid::{Uuid};
 use super::super::cli::{CliOptions};
 use super::super::config::{get_config};
 use super::super::error::{PathfinderError};
-use super::super::rabbitmq::{RabbitMQClient, RabbitMQFuture};
-use super::super::serializer::{Serializer, JsonMessage};
-use super::router::{Router, extract_endpoints, ReadOnlyEndpoint};
+use super::super::rabbitmq::{RabbitMQClient};
+use engine::auth::middleware::{Middleware, EmptyMiddleware};
+use engine::auth::token::middleware::{JwtTokenMiddleware};
+use engine::router::{Router, extract_endpoints, ReadOnlyEndpoint};
+use engine::serializer::{Serializer, JsonMessage};
+use engine::utils::{deserialize_message, wrap_an_error};
 
 
 /// Alias type for msps sender.
-pub type MessageSender = mpsc::UnboundedSender<Message>;
+pub type MessageSender = Arc<mpsc::UnboundedSender<Message>>;
+/// Alias for generic future that must be returned to the proxy.
+pub type GenericFuture = Box<Future<Item=(), Error=()> + Send + Sync + 'static>;
+/// Alias for generic future that can be returned from internal proxy engine
+/// handlers and middlewares.
+pub type EngineFuture = Box<Future<Item=(), Error=PathfinderError> + Send + Sync + 'static>;
 
 
 /// Proxy engine for processing messages, handling errors and communicating with a message broker.
 pub struct Engine {
-    router: Arc<Router>
+    router: Arc<Router>,
+    middleware: Arc<Box<Middleware>>
 }
 
 
@@ -50,10 +59,55 @@ impl Engine {
         let config = get_config(&cli.config);
         let endpoints = extract_endpoints(config);
         let router = Router::new(endpoints);
+        let middleware: Box<Middleware> = match cli.validate {
+            true => Box::new(JwtTokenMiddleware::new(cli)),
+               _ => Box::new(EmptyMiddleware::new(cli))
+        };
 
         Engine {
-            router: Arc::new(router)
+            router: Arc::new(router),
+            middleware: Arc::new(middleware)
         }
+    }
+
+    pub fn process_request(&self,
+                           message: Message,
+                           transmitter: MessageSender,
+                           rabbitmq_client: Arc<RabbitMQClient>
+    ) -> GenericFuture
+    {
+        // 1. Deserialize message into JSON
+        let transmitter_local = transmitter.clone();
+        let json_message = match deserialize_message(&message) {
+            Ok(json_message) => json_message,
+            Err(error) => {
+                let formatted_error = format!("{}", error);
+                let error_message = wrap_an_error(formatted_error.as_str());
+                transmitter_local.unbounded_send(error_message).unwrap();
+                return Box::new(lazy(move || Ok(())))
+            }
+        };
+
+        // 2. Apply a middleware to each incoming message
+        let middleware_local = self.middleware.clone();
+        let auth_future = middleware_local.process_request(json_message.clone());
+
+        // 3. Put request into a queue in RabbitMQ and receive the response
+        let transmitter_nested = transmitter.clone();
+        let transmitter_nested2 = transmitter.clone();
+        let rabbitmq_local = rabbitmq_client.clone();
+        let rabbitmq_future = self.handle(json_message.clone(), transmitter_nested, rabbitmq_local);
+
+        Box::new(
+            auth_future
+                .and_then(move |_| rabbitmq_future)
+                .map_err(move |error| {
+                    let formatted_error = format!("{}", error);
+                    let error_message = wrap_an_error(formatted_error.as_str());
+                    transmitter_nested2.unbounded_send(error_message).unwrap();
+                    ()
+                })
+        )
     }
 
     /// TODO: Replace endpoint/queue clones onto a one struct with expected fields
@@ -62,7 +116,7 @@ impl Engine {
                   message: JsonMessage,
                   transmitter: MessageSender,
                   rabbitmq_client: Arc<RabbitMQClient>
-    ) -> RabbitMQFuture
+    ) -> EngineFuture
     {
         let message_nested = message.clone();
         let url = message_nested["url"].as_str().unwrap();
