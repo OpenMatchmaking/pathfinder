@@ -7,19 +7,14 @@
 pub mod endpoint;
 
 pub use self::endpoint::{
-    REQUEST_EXCHANGE,
-    RESPONSE_EXCHANGE,
-    ReadOnlyEndpoint,
-    Endpoint,
-    extract_endpoints,
+    extract_endpoints, Endpoint, ReadOnlyEndpoint, REQUEST_EXCHANGE, RESPONSE_EXCHANGE,
 };
 
-use std::collections::{HashMap};
-use std::clone::{Clone};
-use std::sync::{Arc};
+use std::clone::Clone;
+use std::collections::HashMap;
+use std::sync::Arc;
 
-use error::{Result, PathfinderError};
-
+use error::{PathfinderError, Result};
 
 /// A struct which is stores a mapping of resources that can be
 /// represented in requests and transformed into certain API endpoints of
@@ -79,7 +74,6 @@ pub struct Router {
     endpoints: HashMap<String, ReadOnlyEndpoint>
 }
 
-
 impl Router {
     /// Returns a new instance of `Router` that contains a mapping for resources.
     pub fn new(endpoints: HashMap<String, ReadOnlyEndpoint>) -> Router {
@@ -94,7 +88,7 @@ impl Router {
             true => {
                 let endpoint = self.endpoints[url].clone();
                 Ok(endpoint)
-            },
+            }
             false => Err(PathfinderError::EndpointNotFound(url.to_string()))
         }
     }
@@ -107,7 +101,12 @@ impl Router {
             Err(_) => {
                 let url = url.to_string();
                 let microservice = self.convert_url_into_microservice(&url);
-                Arc::new(Endpoint::new(&url, &microservice, REQUEST_EXCHANGE, RESPONSE_EXCHANGE))
+                Arc::new(Endpoint::new(
+                    &url,
+                    &microservice,
+                    REQUEST_EXCHANGE,
+                    RESPONSE_EXCHANGE
+                ))
             }
         }
     }
@@ -122,11 +121,10 @@ impl Router {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use config::{get_config};
-    use engine::router::{Router, extract_endpoints, REQUEST_EXCHANGE, RESPONSE_EXCHANGE};
+    use config::get_config;
+    use engine::router::{extract_endpoints, Router, REQUEST_EXCHANGE, RESPONSE_EXCHANGE};
 
     fn get_router(file_path: &str) -> Box<Router> {
         let config = get_config(file_path);

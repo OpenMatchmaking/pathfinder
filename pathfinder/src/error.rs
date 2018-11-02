@@ -7,17 +7,15 @@
 
 extern crate config;
 
-use std::io;
 use std::error;
 use std::fmt;
+use std::io;
 use std::result;
 
-use self::config::{ConfigError};
-
+use self::config::ConfigError;
 
 /// Type alias for `Result` objects that return a Pathfinder error.
 pub type Result<T> = result::Result<T, PathfinderError>;
-
 
 /// An enum of all possible errors which could occur during the work of reverse proxy.
 #[derive(Debug)]
@@ -39,9 +37,8 @@ pub enum PathfinderError {
     /// The error that occurred when token isn't specified or invalid.
     AuthenticationError(String),
     /// The error that occurred with a message broker.
-    MessageBrokerError(String)
+    MessageBrokerError(String),
 }
-
 
 impl fmt::Display for PathfinderError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -56,7 +53,6 @@ impl fmt::Display for PathfinderError {
         }
     }
 }
-
 
 impl error::Error for PathfinderError {
     fn description(&self) -> &str {
@@ -76,13 +72,11 @@ impl error::Error for PathfinderError {
     }
 }
 
-
 impl From<io::Error> for PathfinderError {
     fn from(err: io::Error) -> PathfinderError {
         PathfinderError::Io(err)
     }
 }
-
 
 impl From<config::ConfigError> for PathfinderError {
     fn from(err: config::ConfigError) -> PathfinderError {

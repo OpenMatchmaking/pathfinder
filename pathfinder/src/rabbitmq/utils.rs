@@ -1,12 +1,11 @@
 //! Util functions for interaction with Lapin library
 //
 
-use std::net::{SocketAddr};
+use std::net::SocketAddr;
 
-use amq_protocol::uri::{AMQPUri};
+use amq_protocol::uri::AMQPUri;
 
-use super::super::cli::{CliOptions};
-
+use super::super::cli::CliOptions;
 
 /// Generates a connection URL to RabbitMQ broker.
 pub fn get_address_to_rabbitmq(uri: &AMQPUri) -> SocketAddr {

@@ -1,16 +1,15 @@
 //! Middleware interfaces for the pathfinder project
 //!
 
-use cli::{CliOptions};
-use futures::{Future};
-use futures::future::{lazy};
+use cli::CliOptions;
+use futures::future::lazy;
+use futures::Future;
 
-use error::{PathfinderError};
-use engine::serializer::{JsonMessage};
+use engine::serializer::JsonMessage;
+use error::PathfinderError;
 
 /// Type alias for future result type.
 pub type MiddlewareFuture = Box<Future<Item=(), Error=PathfinderError> + Sync + Send + 'static>;
-
 
 /// A trait for types which can be used as middleware during processing a request from a client.
 pub trait Middleware: Send + Sync {
@@ -19,18 +18,15 @@ pub trait Middleware: Send + Sync {
     fn process_request(&self, message: JsonMessage) -> MiddlewareFuture;
 }
 
-
 /// Default struct which is used for reverse proxy without an authentication
 /// layer.
 pub struct EmptyMiddleware;
-
 
 impl EmptyMiddleware {
     pub fn new(_cli: &CliOptions) -> EmptyMiddleware {
         EmptyMiddleware {}
     }
 }
-
 
 impl Middleware for EmptyMiddleware {
     /// Returns an empty future which is doesn't doing anything.

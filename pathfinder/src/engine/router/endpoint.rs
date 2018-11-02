@@ -4,11 +4,10 @@
 extern crate config;
 
 use std::collections::{HashMap, HashSet};
-use std::sync::{Arc};
+use std::sync::Arc;
 
-use error::{PathfinderError};
 use self::config::{Config, Value};
-
+use error::PathfinderError;
 
 /// Default AMQP exchange point for requests
 pub const REQUEST_EXCHANGE: &'static str = "open-matchmaking.direct";
@@ -34,13 +33,17 @@ pub struct Endpoint {
     url: String,
     microservice: String,
     request_exchange: String,
-    response_exchange: String,
+    response_exchange: String
 }
-
 
 impl Endpoint {
     /// Returns a new instance of `Endpoint`.
-    pub fn new(url: &str, microservice: &str, request_exchange: &str, response_exchange: &str) -> Endpoint {
+    pub fn new(
+        url: &str,
+        microservice: &str,
+        request_exchange: &str,
+        response_exchange: &str,
+    ) -> Endpoint {
         Endpoint {
             url: url.to_string(),
             microservice: microservice.to_string(),
@@ -70,15 +73,13 @@ impl Endpoint {
     }
 }
 
-
 /// Extract a value configuration object as a string if it exists. Otherwise returns an default value as a string.
 fn get_value_from_config_as_str(conf: &HashMap<String, Value>, key: &str, default: &str) -> String {
     match conf.get(key) {
         Some(value) => value.to_owned().into_str().unwrap(),
-        None => String::from(default)
+        None => String::from(default),
     }
 }
-
 
 /// Returns a HashMap with mapping for URL onto certain queue/topic name that
 /// were extracted from a configuration.
@@ -87,14 +88,13 @@ pub fn extract_endpoints(conf: Box<Config>) -> HashMap<String, ReadOnlyEndpoint>
 
     let config_endpoints: Vec<Value> = match conf.get_array("endpoints") {
         Ok(array) => array,
-        Err(_) => Vec::new()
+        Err(_) => Vec::new(),
     };
 
     let default_request_exchange = String::from(REQUEST_EXCHANGE);
     let default_response_exchange = String::from(RESPONSE_EXCHANGE);
 
     for endpoint in &config_endpoints {
-
         // One the high level you have structure like
         // {"search": {"url": ..., "microservice": ...}},
         // but will be convenient for further processing, if we return
@@ -103,7 +103,7 @@ pub fn extract_endpoints(conf: Box<Config>) -> HashMap<String, ReadOnlyEndpoint>
             Ok(table) => {
                 let endpoint_name = table.keys().last().unwrap().as_str().clone();
                 table[endpoint_name].clone().into_table().unwrap()
-            },
+            }
             Err(_) => {
                 let error = format!("endpoint \"{}\" is invalid.", endpoint);
                 println!("{}", PathfinderError::InvalidEndpoint(error));
@@ -113,35 +113,50 @@ pub fn extract_endpoints(conf: Box<Config>) -> HashMap<String, ReadOnlyEndpoint>
 
         // Check on required fields
         let mut missing_fields = Vec::new();
-        let required_fields : HashSet<&str> = ["url", "microservice"].iter().cloned().collect();
-        for key in required_fields  {
+        let required_fields: HashSet<&str> = ["url", "microservice"].iter().cloned().collect();
+        for key in required_fields {
             if !configuration.contains_key(key) {
                 missing_fields.push(key);
             }
         }
 
         if missing_fields.len() > 0 {
-            let error = format!("keys {:?} for {} endpoint is missing.", missing_fields, endpoint);
+            let error = format!(
+                "keys {:?} for {} endpoint is missing.",
+                missing_fields, endpoint
+            );
             println!("{}", PathfinderError::InvalidEndpoint(error));
             continue;
         }
 
         let url = get_value_from_config_as_str(&configuration, "url", "");
         let microservice = get_value_from_config_as_str(&configuration, "microservice", "");
-        let request_exchange = get_value_from_config_as_str(&configuration, "request_exchange", &default_request_exchange);
-        let response_exchange = get_value_from_config_as_str(&configuration, "response_exchange", &default_response_exchange);
-        let endpoint = Arc::new(Endpoint::new(&url, &microservice, &request_exchange, &response_exchange));
+        let request_exchange = get_value_from_config_as_str(
+            &configuration,
+            "request_exchange",
+            &default_request_exchange,
+        );
+        let response_exchange = get_value_from_config_as_str(
+            &configuration,
+            "response_exchange",
+            &default_response_exchange,
+        );
+        let endpoint = Arc::new(Endpoint::new(
+            &url,
+            &microservice,
+            &request_exchange,
+            &response_exchange,
+        ));
         endpoints.insert(url, endpoint);
     }
 
     endpoints
 }
 
-
 #[cfg(test)]
 mod tests {
-    use config::{get_config};
-    use engine::router::endpoint::{Endpoint, extract_endpoints};
+    use config::get_config;
+    use engine::router::endpoint::{extract_endpoints, Endpoint};
 
     #[test]
     fn test_extract_endpoints_returns_an_empty_dict_by_default() {
@@ -164,7 +179,10 @@ mod tests {
         assert_eq!(endpoints.len(), 3);
         assert_eq!(endpoints.contains_key("/api/matchmaking/search"), true);
         assert_eq!(endpoints.contains_key("/api/matchmaking/leaderboard"), true);
-        assert_eq!(endpoints.contains_key("/api/matchmaking/player-of-the-game"), true);
+        assert_eq!(
+            endpoints.contains_key("/api/matchmaking/player-of-the-game"),
+            true
+        );
     }
 
     #[test]
@@ -172,7 +190,10 @@ mod tests {
         let conf = get_config(&"./tests/files/config_with_invalid_endpoints.yaml");
         let endpoints = extract_endpoints(conf);
         assert_eq!(endpoints.len(), 1);
-        assert_eq!(endpoints.contains_key("/api/matchmaking/player-of-the-game"), true);
+        assert_eq!(
+            endpoints.contains_key("/api/matchmaking/player-of-the-game"),
+            true
+        );
     }
 
     #[test]

@@ -5,13 +5,12 @@
 //! for client before sending through transmitters.
 //!
 
-use std::sync::{Arc};
+use std::sync::Arc;
 
-use error::{Result, PathfinderError};
+use error::{PathfinderError, Result};
 
 use json::{parse as parse_json, JsonValue};
-use tungstenite::protocol::{Message};
-
+use tungstenite::protocol::Message;
 
 /// Type alias for JSON object
 pub type JsonMessage = Arc<Box<JsonValue>>;
@@ -47,7 +46,6 @@ pub type JsonMessage = Arc<Box<JsonValue>>;
 ///
 pub struct Serializer;
 
-
 impl Serializer {
     /// Returns a new instance of `Serializer`.
     pub fn new() -> Serializer {
@@ -63,10 +61,10 @@ impl Serializer {
 
     /// Transforms an instance of the `tungstenite::Message` type into JSON object.
     pub fn deserialize(&self, message: &Message) -> Result<JsonMessage> {
-         let text_message = self.parse_into_text(message)?;
-         let mut json_message = self.parse_into_json(text_message.as_str())?;
-         json_message = self.validate_json(json_message)?;
-         Ok(json_message)
+        let text_message = self.parse_into_text(message)?;
+        let mut json_message = self.parse_into_json(text_message.as_str())?;
+        json_message = self.validate_json(json_message)?;
+        Ok(json_message)
     }
 
     /// Parses an instance of the `tungstenite::Message` type and returns a UTF-8
@@ -76,7 +74,7 @@ impl Serializer {
             Ok(text_message) => Ok(text_message),
             Err(err) => {
                 let formatted_message = format!("{}", err);
-                return Err(PathfinderError::DecodingError(formatted_message))
+                return Err(PathfinderError::DecodingError(formatted_message));
             }
         }
     }
@@ -87,7 +85,7 @@ impl Serializer {
             Ok(message) => Ok(Arc::new(Box::new(message))),
             Err(err) => {
                 let formatted_message = format!("{}", err);
-                return Err(PathfinderError::DecodingError(formatted_message))
+                return Err(PathfinderError::DecodingError(formatted_message));
             }
         }
     }
@@ -108,13 +106,11 @@ impl Serializer {
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
-    use super::{Serializer};
-    use super::super::json::{Null};
-    use super::super::tungstenite::{Message};
+    use super::super::json::Null;
+    use super::super::tungstenite::Message;
+    use super::Serializer;
 
     #[test]
     fn test_serialize_returns_a_new_message_instance() {

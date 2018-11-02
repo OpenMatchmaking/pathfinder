@@ -3,4 +3,4 @@
 
 pub mod middleware;
 
-pub use engine::auth::token::middleware::{JwtTokenMiddleware};
+pub use engine::auth::token::middleware::JwtTokenMiddleware;

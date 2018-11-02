@@ -4,5 +4,5 @@
 pub mod middleware;
 pub mod token;
 
-pub use self::middleware::{MiddlewareFuture, Middleware, EmptyMiddleware};
-pub use engine::auth::token::middleware::{JwtTokenMiddleware};
+pub use self::middleware::{EmptyMiddleware, Middleware, MiddlewareFuture};
+pub use engine::auth::token::middleware::JwtTokenMiddleware;

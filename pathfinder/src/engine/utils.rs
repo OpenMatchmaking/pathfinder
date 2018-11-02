@@ -1,11 +1,9 @@
 /// Utility module for handling data in Open Matchmaking project.
 ///
+use tungstenite::protocol::Message;
 
-use tungstenite::protocol::{Message};
-
-use super::super::error::{Result};
-use super::serializer::{Serializer, JsonMessage};
-
+use super::super::error::Result;
+use super::serializer::{JsonMessage, Serializer};
 
 /// Transforms an error (which is a string) into JSON object in the special format.
 pub fn wrap_an_error(err: &str) -> Message {
@@ -26,13 +24,12 @@ pub fn deserialize_message(message: &Message) -> Result<JsonMessage> {
     serializer.deserialize(message)
 }
 
-
 #[cfg(test)]
 mod tests {
-    use std::sync::{Arc};
-    use super::super::tungstenite::{Message};
-    use super::super::json::{parse as json_parse};
-    use super::{wrap_an_error, serialize_message, deserialize_message};
+    use super::super::json::parse as json_parse;
+    use super::super::tungstenite::Message;
+    use super::{deserialize_message, serialize_message, wrap_an_error};
+    use std::sync::Arc;
 
     #[test]
     fn test_wrap_an_error_returns_json_with_details_field() {
