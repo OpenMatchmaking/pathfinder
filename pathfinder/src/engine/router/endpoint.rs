@@ -4,6 +4,7 @@
 extern crate config;
 
 use std::collections::{HashMap, HashSet};
+use std::str::FromStr;
 use std::sync::Arc;
 
 use self::config::{Config, Value};
@@ -33,7 +34,8 @@ pub struct Endpoint {
     url: String,
     microservice: String,
     request_exchange: String,
-    response_exchange: String
+    response_exchange: String,
+    is_token_required: bool
 }
 
 impl Endpoint {
@@ -43,12 +45,14 @@ impl Endpoint {
         microservice: &str,
         request_exchange: &str,
         response_exchange: &str,
+        is_token_required: bool
     ) -> Endpoint {
         Endpoint {
             url: url.to_string(),
             microservice: microservice.to_string(),
             request_exchange: request_exchange.to_string(),
-            response_exchange: response_exchange.to_string()
+            response_exchange: response_exchange.to_string(),
+            is_token_required: is_token_required
         }
     }
 
@@ -71,13 +75,31 @@ impl Endpoint {
     pub fn get_response_exchange(&self) -> String {
         self.response_exchange.clone()
     }
+
+    /// Determines whether to check tokens or not.
+    pub fn is_token_required(&self) -> bool {
+        self.is_token_required
+    }
 }
 
-/// Extract a value configuration object as a string if it exists. Otherwise returns an default value as a string.
-fn get_value_from_config_as_str(conf: &HashMap<String, Value>, key: &str, default: &str) -> String {
+/// Extracts a value configuration object as a string if it exists. Otherwise returns an default 
+/// value as a string.
+fn get_value_as_str(conf: &HashMap<String, Value>, key: &str, default: &str) -> String {
     match conf.get(key) {
         Some(value) => value.to_owned().into_str().unwrap(),
-        None => String::from(default),
+        None => String::from(default)
+    }
+}
+
+/// Extracts a value configuration object as a string and tries to convert it to the boolean type. 
+/// In the case of parsing errors or when the key doesn't exists returns `false`.
+fn get_value_as_bool(conf: &HashMap<String, Value>, key: &str, default: bool) -> bool {
+    match conf.get(key) {
+        Some(value) => {
+            let raw_value = value.to_owned().into_str().unwrap();
+            bool::from_str(&raw_value).unwrap_or(default)
+        }
+        _ => false
     }
 }
 
@@ -129,25 +151,13 @@ pub fn extract_endpoints(conf: Box<Config>) -> HashMap<String, ReadOnlyEndpoint>
             continue;
         }
 
-        let url = get_value_from_config_as_str(&configuration, "url", "");
-        let microservice = get_value_from_config_as_str(&configuration, "microservice", "");
-        let request_exchange = get_value_from_config_as_str(
-            &configuration,
-            "request_exchange",
-            &default_request_exchange,
-        );
-        let response_exchange = get_value_from_config_as_str(
-            &configuration,
-            "response_exchange",
-            &default_response_exchange,
-        );
-        let endpoint = Arc::new(Endpoint::new(
-            &url,
-            &microservice,
-            &request_exchange,
-            &response_exchange,
-        ));
-        endpoints.insert(url, endpoint);
+        let url = get_value_as_str(&configuration, "url", "");
+        let microservice = get_value_as_str(&configuration, "microservice", "");
+        let request_exchange = get_value_as_str(&configuration, "request_exchange", &default_request_exchange);
+        let response_exchange = get_value_as_str(&configuration, "response_exchange", &default_response_exchange);
+        let is_token_required = get_value_as_bool(&configuration, "token_required", false);
+        let endpoint = Endpoint::new(&url, &microservice, &request_exchange, &response_exchange, is_token_required);
+        endpoints.insert(url, Arc::new(endpoint));
     }
 
     endpoints

@@ -1,10 +1,9 @@
-//! Middleware implementations with token support
+//! Middleware implementations with JSON Web Token support.
 //!
 
-use cli::CliOptions;
 use futures::future::lazy;
 
-use engine::auth::middleware::{Middleware, MiddlewareFuture};
+use engine::middleware::base::{Middleware, MiddlewareFuture};
 use engine::serializer::JsonMessage;
 
 /// A middleware class, that will check a JSON Web Token in WebSocket message.
@@ -13,7 +12,7 @@ pub struct JwtTokenMiddleware;
 
 impl JwtTokenMiddleware {
     /// Returns a new instance of `JwtTokenMiddleware` structure.
-    pub fn new(_cli: &CliOptions) -> JwtTokenMiddleware {
+    pub fn new() -> JwtTokenMiddleware {
         JwtTokenMiddleware {}
     }
 }

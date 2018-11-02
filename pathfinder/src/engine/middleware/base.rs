@@ -1,8 +1,6 @@
 //! Middleware interfaces for the pathfinder project
 //!
 
-use cli::CliOptions;
-use futures::future::lazy;
 use futures::Future;
 
 use engine::serializer::JsonMessage;
@@ -16,21 +14,4 @@ pub trait Middleware: Send + Sync {
     /// Applied transforms and checks to an incoming request. If it failed,
     /// then should return a `PathfinderError` instance.
     fn process_request(&self, message: JsonMessage) -> MiddlewareFuture;
-}
-
-/// Default struct which is used for reverse proxy without an authentication
-/// layer.
-pub struct EmptyMiddleware;
-
-impl EmptyMiddleware {
-    pub fn new(_cli: &CliOptions) -> EmptyMiddleware {
-        EmptyMiddleware {}
-    }
-}
-
-impl Middleware for EmptyMiddleware {
-    /// Returns an empty future which is doesn't doing anything.
-    fn process_request(&self, _message: JsonMessage) -> MiddlewareFuture {
-        Box::new(lazy(move || Ok(())))
-    }
 }
