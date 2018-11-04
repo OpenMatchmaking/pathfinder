@@ -26,8 +26,8 @@ pub fn deserialize_message(message: &Message) -> Result<JsonMessage> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::json::parse as json_parse;
-    use super::super::tungstenite::Message;
+    use super::super::super::json::parse as json_parse;
+    use super::super::super::tungstenite::Message;
     use super::{deserialize_message, serialize_message, wrap_an_error};
     use std::sync::Arc;
 

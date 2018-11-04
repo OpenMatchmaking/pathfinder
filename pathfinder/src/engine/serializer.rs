@@ -108,8 +108,8 @@ impl Serializer {
 
 #[cfg(test)]
 mod tests {
-    use super::super::json::Null;
-    use super::super::tungstenite::Message;
+    use super::super::super::json::Null;
+    use super::super::super::tungstenite::Message;
     use super::Serializer;
 
     #[test]

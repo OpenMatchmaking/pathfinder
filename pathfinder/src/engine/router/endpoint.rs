@@ -212,7 +212,7 @@ mod tests {
         let microservice_name = "api.matchmaking.test";
         let request_exchange = "open-matchmaking.direct";
         let respone_exchange = "open-matchmaking.responses.direct";
-        let endpoint = Endpoint::new(url, microservice_name, request_exchange, respone_exchange);
+        let endpoint = Endpoint::new(url, microservice_name, request_exchange, respone_exchange, false);
 
         assert_eq!(endpoint.get_url(), url);
     }
@@ -223,7 +223,7 @@ mod tests {
         let microservice_name = "api.matchmaking.test";
         let request_exchange = "open-matchmaking.direct";
         let respone_exchange = "open-matchmaking.responses.direct";
-        let endpoint = Endpoint::new(url, microservice_name, request_exchange, respone_exchange);
+        let endpoint = Endpoint::new(url, microservice_name, request_exchange, respone_exchange, false);
 
         assert_eq!(endpoint.get_microservice(), microservice_name);
     }
@@ -234,7 +234,7 @@ mod tests {
         let microservice_name = "api.matchmaking.test";
         let request_exchange = "open-matchmaking.direct";
         let respone_exchange = "open-matchmaking.responses.direct";
-        let endpoint = Endpoint::new(url, microservice_name, request_exchange, respone_exchange);
+        let endpoint = Endpoint::new(url, microservice_name, request_exchange, respone_exchange, false);
 
         assert_eq!(endpoint.get_request_exchange(), request_exchange);
     }
@@ -245,8 +245,30 @@ mod tests {
         let microservice_name = "api.matchmaking.test";
         let request_exchange = "open-matchmaking.direct";
         let respone_exchange = "open-matchmaking.responses.direct";
-        let endpoint = Endpoint::new(url, microservice_name, request_exchange, respone_exchange);
+        let endpoint = Endpoint::new(url, microservice_name, request_exchange, respone_exchange, false);
 
         assert_eq!(endpoint.get_response_exchange(), respone_exchange);
+    }
+
+    #[test]
+    fn test_is_token_required_returns_false() {
+        let url = "/api/matchmaking/test";
+        let microservice_name = "api.matchmaking.test";
+        let request_exchange = "open-matchmaking.direct";
+        let respone_exchange = "open-matchmaking.responses.direct";
+        let endpoint = Endpoint::new(url, microservice_name, request_exchange, respone_exchange, true);
+
+        assert_eq!(endpoint.is_token_required(), true);
+    }
+
+    #[test]
+    fn test_is_token_required_returns_true() {
+        let url = "/api/matchmaking/test";
+        let microservice_name = "api.matchmaking.test";
+        let request_exchange = "open-matchmaking.direct";
+        let respone_exchange = "open-matchmaking.responses.direct";
+        let endpoint = Endpoint::new(url, microservice_name, request_exchange, respone_exchange, false);
+
+        assert_eq!(endpoint.is_token_required(), false);
     }
 }
