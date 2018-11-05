@@ -1,10 +1,14 @@
 //! Middleware interfaces for the pathfinder project
 //!
 
+use std::sync::Arc;
+
 use futures::Future;
 
 use engine::serializer::JsonMessage;
 use error::PathfinderError;
+use rabbitmq::RabbitMQClient;
+
 
 /// Type alias for future result type.
 pub type MiddlewareFuture = Box<Future<Item=(), Error=PathfinderError> + Sync + Send + 'static>;
@@ -13,5 +17,5 @@ pub type MiddlewareFuture = Box<Future<Item=(), Error=PathfinderError> + Sync + 
 pub trait Middleware: Send + Sync {
     /// Applied transforms and checks to an incoming request. If it failed,
     /// then should return a `PathfinderError` instance.
-    fn process_request(&self, message: JsonMessage) -> MiddlewareFuture;
+    fn process_request(&self, message: JsonMessage, rabbitmq_client: Arc<RabbitMQClient>) -> MiddlewareFuture;
 }

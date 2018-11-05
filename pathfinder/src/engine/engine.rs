@@ -88,7 +88,7 @@ impl Engine {
         let url = json_message["url"].as_str().unwrap();
         let endpoint = self.get_endpoint(url).clone();
         let middleware = self.get_middleware(endpoint.clone()).clone();
-        let auth_future = middleware.process_request(json_message.clone());
+        let auth_future = middleware.process_request(json_message.clone(), rabbitmq_client.clone());
 
         // 3. Put request into a queue in RabbitMQ and receive the response
         let rpc_options = RpcOptions::new(

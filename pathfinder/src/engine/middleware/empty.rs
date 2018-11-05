@@ -2,10 +2,13 @@
 /// don't applying any check to the passed data.
 ///
 
+use std::sync::Arc;
+
 use futures::future::lazy;
 
 use engine::middleware::base::{Middleware, MiddlewareFuture};
 use engine::serializer::JsonMessage;
+use rabbitmq::RabbitMQClient;
 
 /// Default struct which is used for reverse proxy without an authentication
 /// layer.
@@ -19,7 +22,7 @@ impl EmptyMiddleware {
 
 impl Middleware for EmptyMiddleware {
     /// Returns an empty future which is doesn't doing anything.
-    fn process_request(&self, _message: JsonMessage) -> MiddlewareFuture {
+    fn process_request(&self, _message: JsonMessage, _rabbitmq_client: Arc<RabbitMQClient>) -> MiddlewareFuture {
         Box::new(lazy(move || Ok(())))
     }
 }
