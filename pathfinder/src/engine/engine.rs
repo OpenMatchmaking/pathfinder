@@ -66,12 +66,7 @@ impl Engine {
         }
     }
 
-    pub fn process_request(
-        &self,
-        message: Message,
-        transmitter: MessageSender,
-        rabbitmq_client: Arc<RabbitMQClient>
-    ) -> Box<Future<Item=(), Error=()> + Send + Sync + 'static> {
+    pub fn process_request(&self, message: Message, transmitter: MessageSender, rabbitmq_client: Arc<RabbitMQClient>) -> Box<Future<Item=(), Error=()> + Send + Sync + 'static> {
         // 1. Deserialize message into JSON
         let transmitter_local = transmitter.clone();
         let json_message = match deserialize_message(&message) {
@@ -277,11 +272,7 @@ impl Engine {
     }
 
     /// Prepares a list of key-value pairs for headers in message.
-    fn prepare_request_headers(
-        &self,
-        json: &JsonMessage,
-        endpoint: ReadOnlyEndpoint
-    ) -> Box<Vec<(String, String)>> {
+    fn prepare_request_headers(&self, json: &JsonMessage, endpoint: ReadOnlyEndpoint) -> Box<Vec<(String, String)>> {
         Box::new(vec![
             (String::from("microservice_name"), endpoint.get_microservice()),
             (String::from("request_url"), endpoint.get_url()),

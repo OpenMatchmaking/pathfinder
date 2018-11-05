@@ -26,9 +26,7 @@ pub struct RabbitMQClient {
 
 impl RabbitMQClient {
     /// Initializes the inner fields of RabbitMQ client for future usage.
-    pub fn connect(
-        uri: &AMQPUri,
-    ) -> impl Future<Item=Self, Error=io::Error> + Sync + Send + 'static {
+    pub fn connect(uri: &AMQPUri) -> impl Future<Item=Self, Error=io::Error> + Sync + Send + 'static {
         let address = get_address_to_rabbitmq(uri);
         let uri_inner = uri.clone();
 
@@ -46,9 +44,7 @@ impl RabbitMQClient {
     }
 
     /// Returns a lapin channel as future, based on the lapin client instance.
-    pub fn get_channel(
-        &self,
-    ) -> impl Future<Item=LapinChannel, Error=io::Error> + Sync + Send + 'static {
+    pub fn get_channel(&self) -> impl Future<Item=LapinChannel, Error=io::Error> + Sync + Send + 'static {
         let client = self.client.clone();
         client.create_confirm_channel(ConfirmSelectOptions::default())
     }

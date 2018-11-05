@@ -93,13 +93,13 @@ impl Proxy {
                             let connections_nested = connections_inner.clone();
                             let transmitter_nested = connections_nested.lock().unwrap()[&addr_nested].clone();
                             let rabbitmq_nested = rabbimq_local.clone();
-                            let processing_request_future = engine_local.process_request(
+                            let process_request_future = engine_local.process_request(
                                 message,
                                 transmitter_nested,
                                 rabbitmq_nested,
                             );
 
-                            tokio::spawn(processing_request_future);
+                            tokio::spawn(process_request_future);
                             Ok(())
                         });
 
@@ -146,10 +146,7 @@ impl Proxy {
         tokio::runtime::run(server_future);
     }
 
-    fn get_rabbitmq_client(
-        &self,
-    ) -> impl Future<Item=Arc<RabbitMQClient>, Error=PathfinderError> + Sync + Send + 'static
-    {
+    fn get_rabbitmq_client(&self) -> impl Future<Item=Arc<RabbitMQClient>, Error=PathfinderError> + Sync + Send + 'static {
         let amqp_uri = self.amqp_uri.clone();
         RabbitMQClient::connect(amqp_uri.as_ref())
             .map(|client| Arc::new(client))

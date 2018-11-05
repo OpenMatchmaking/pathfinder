@@ -40,13 +40,7 @@ pub struct Endpoint {
 
 impl Endpoint {
     /// Returns a new instance of `Endpoint`.
-    pub fn new(
-        url: &str,
-        microservice: &str,
-        request_exchange: &str,
-        response_exchange: &str,
-        is_token_required: bool
-    ) -> Endpoint {
+    pub fn new(url: &str, microservice: &str, request_exchange: &str, response_exchange: &str, is_token_required: bool) -> Endpoint {
         Endpoint {
             url: url.to_string(),
             microservice: microservice.to_string(),

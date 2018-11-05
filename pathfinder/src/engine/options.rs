@@ -12,26 +12,16 @@ use super::serializer::JsonMessage;
 
 /// Simple wrapper for options that will be passed to futures.
 pub struct RpcOptions {
-    pub endpoint: ReadOnlyEndpoint,
-    pub message: JsonMessage,
+    endpoint: ReadOnlyEndpoint,
+    message: JsonMessage,
     transmitter: Arc<mpsc::UnboundedSender<Message>>,
     queue_name: Arc<String>
 }
 
 
 impl RpcOptions {
-    pub fn new(
-        endpoint: ReadOnlyEndpoint,
-        message: JsonMessage,
-        transmitter: Arc<mpsc::UnboundedSender<Message>>,
-        queue_name: Arc<String>
-    ) -> RpcOptions {
-        RpcOptions {
-            endpoint,
-            message,
-            transmitter,
-            queue_name
-        }
+    pub fn new(endpoint: ReadOnlyEndpoint, message: JsonMessage, transmitter: Arc<mpsc::UnboundedSender<Message>>, queue_name: Arc<String>) -> RpcOptions {
+        RpcOptions { endpoint, message, transmitter, queue_name }
     }
 
     pub fn endpoint(&self) -> &ReadOnlyEndpoint {
