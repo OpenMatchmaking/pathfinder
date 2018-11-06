@@ -73,7 +73,7 @@ impl Router {
 #[cfg(test)]
 mod tests {
     use config::get_config;
-    use engine::router::{extract_endpoints, Router, REQUEST_EXCHANGE, RESPONSE_EXCHANGE};
+    use engine::router::{extract_endpoints, Router};
 
     fn get_router(file_path: &str) -> Box<Router> {
         let config = get_config(file_path);
@@ -98,16 +98,5 @@ mod tests {
         let result_match = router.match_url(&"/api/matchmaking/search");
 
         assert_eq!(result_match.is_err(), true);
-    }
-
-    #[test]
-    fn test_router_returns_a_custom_endpont_for_a_match() {
-        let router = get_router(&"./tests/files/config_with_custom_url_mapping.yaml");
-        let endpoint = router.match_url_or_default(&"/api/matchmaking/leaderboard");
-
-        assert_eq!(endpoint.get_url(), "/api/matchmaking/leaderboard");
-        assert_eq!(endpoint.get_microservice(), "microservice.leaderboard");
-        assert_eq!(endpoint.get_request_exchange(), "amqp.direct");
-        assert_eq!(endpoint.get_response_exchange(), "open-matchmaking.default");
     }
 }
