@@ -24,7 +24,7 @@ use uuid::Uuid;
 
 use super::super::cli::CliOptions;
 use super::super::config::get_config;
-use super::super::error::PathfinderError;
+use super::super::error::{Result, PathfinderError};
 use super::super::rabbitmq::RabbitMQClient;
 use engine::middleware::{EmptyMiddleware, JwtTokenMiddleware, Middleware};
 use engine::router::{extract_endpoints, ReadOnlyEndpoint, Router};
@@ -68,20 +68,29 @@ impl Engine {
 
     pub fn process_request(&self, message: Message, transmitter: MessageSender, rabbitmq_client: Arc<RabbitMQClient>) -> Box<Future<Item=(), Error=()> + Send + Sync + 'static> {
         // 1. Deserialize message into JSON
-        let transmitter_local = transmitter.clone();
+        let transmitter_for_json_error = transmitter.clone();
         let json_message = match deserialize_message(&message) {
             Ok(json_message) => json_message,
             Err(error) => {
                 let formatted_error = format!("{}", error);
                 let error_message = wrap_an_error(formatted_error.as_str());
-                transmitter_local.unbounded_send(error_message).unwrap();
+                transmitter_for_json_error.unbounded_send(error_message).unwrap();
                 return Box::new(lazy(move || Ok(())));
             }
         };
 
         // 2. Apply a middleware to each incoming message
         let url = json_message["url"].as_str().unwrap();
-        let endpoint = self.get_endpoint(url).clone();
+        let transmitter_for_match_error = transmitter.clone();
+        let endpoint = match self.get_endpoint(url) {
+            Ok(endpoint) => endpoint.clone(),
+            Err(error) => {
+                let formatted_error = format!("{}", error);
+                let error_message = wrap_an_error(formatted_error.as_str());
+                transmitter_for_match_error.unbounded_send(error_message).unwrap();
+                return Box::new(lazy(move || Ok(())));
+            }
+        };
         let middleware = self.get_middleware(endpoint.clone()).clone();
         let auth_future = middleware.process_request(json_message.clone(), rabbitmq_client.clone());
 
@@ -108,9 +117,9 @@ impl Engine {
     }
 
     /// Returns an endpoint based on specified URL.
-    fn get_endpoint(&self, url: &str) -> ReadOnlyEndpoint {
+    fn get_endpoint(&self, url: &str) -> Result<ReadOnlyEndpoint> {
         let router = self.router.clone();
-        router.match_url_or_default(&url)
+        router.match_url(&url)
     }
 
     /// Returns a middleware for processing client credentials.
