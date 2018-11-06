@@ -7,13 +7,10 @@ use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 use std::sync::Arc;
 
+use super::super::{REQUEST_EXCHANGE, RESPONSE_EXCHANGE};
 use self::config::{Config, Value};
 use error::PathfinderError;
 
-/// Default AMQP exchange point for requests
-pub const REQUEST_EXCHANGE: &'static str = "open-matchmaking.direct";
-/// Default AMQP exchange point for responses
-pub const RESPONSE_EXCHANGE: &'static str = "open-matchmaking.responses.direct";
 /// Type alias for thread-safe endpoint (only for read-only access)
 pub type ReadOnlyEndpoint = Arc<Endpoint>;
 

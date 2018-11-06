@@ -5,6 +5,11 @@ pub mod options;
 pub mod serializer;
 pub mod utils;
 
+/// Default AMQP exchange point for requests
+pub const REQUEST_EXCHANGE: &'static str = "open-matchmaking.direct";
+/// Default AMQP exchange point for responses
+pub const RESPONSE_EXCHANGE: &'static str = "open-matchmaking.responses.direct";
+
 pub use self::engine::{Engine, EngineFuture, MessageSender};
 pub use self::middleware::{
     EmptyMiddleware,
