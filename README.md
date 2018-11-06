@@ -13,7 +13,6 @@ USAGE:
 
 FLAGS:
     -s, --secured     Enable the SSL/TLS mode for connections with RabbitMQ
-    -v, --validate    Validate a token that was specified with data
     -h, --help        Prints help information
     -V, --version     Prints version information
 

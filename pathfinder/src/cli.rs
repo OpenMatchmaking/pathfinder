@@ -22,13 +22,6 @@ pub struct CliOptions {
     pub rabbitmq_secured: bool,
 
     #[structopt(
-        short = "v",
-        long = "validate",
-        help = "Validate a token that was specified with data"
-    )]
-    pub validate: bool,
-
-    #[structopt(
         short = "c",
         long = "config",
         help = "Path to a custom settings file",
