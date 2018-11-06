@@ -81,12 +81,12 @@ impl Engine {
         };
 
         // 3. Instantiate futures that will be processing client credentials and a request
-        let rpc_options = Arc::new(RpcOptions::new(
-            endpoint.clone(),
-            json_message.clone(),
-            transmitter.clone(),
-            Arc::new(format!("{}", Uuid::new_v4()))
-        ));
+        let rpc_options = Arc::new(RpcOptions::default()
+            .with_endpoint(endpoint.clone())
+            .with_message(json_message.clone())
+            .with_transmitter(transmitter.clone())
+            .with_queue_name(Arc::new(format!("{}", Uuid::new_v4())))
+        );
         let middleware_future = self.get_middleware_future(rabbitmq_client.clone(), rpc_options.clone());
         let rabbitmq_future = self.rpc_request(rabbitmq_client.clone(), rpc_options.clone());
 
@@ -136,10 +136,10 @@ impl Engine {
 
     /// Returns a middleware for processing client credentials.
     fn get_middleware_future(&self, rabbitmq_client: Arc<RabbitMQClient>, options: Arc<RpcOptions>) -> MiddlewareFuture {
-        let endpoint = options.endpoint().clone();
+        let endpoint = options.get_endpoint().unwrap().clone();
         let middleware = self.get_middleware_by_endpoint(endpoint);
 
-        let json_message = options.message().clone();
+        let json_message = options.get_message().unwrap().clone();
         let rabbitmq_client_local = rabbitmq_client.clone();
         middleware.process_request(json_message, rabbitmq_client_local)
     }
@@ -154,8 +154,8 @@ impl Engine {
 
     /// Main handler for generating a response per each incoming request.
     fn rpc_request(&self, rabbitmq_client: Arc<RabbitMQClient>, options: Arc<RpcOptions>) -> EngineFuture {
-        let message = options.message().clone();
-        let endpoint = options.endpoint().clone();
+        let message = options.get_message().unwrap().clone();
+        let endpoint = options.get_endpoint().unwrap().clone();
         let request_headers = self.prepare_request_headers(&message, endpoint);
         let rabbitmq_client_local = rabbitmq_client.clone();
 
@@ -164,7 +164,7 @@ impl Engine {
             rabbitmq_client_local.get_channel()
             // 2. Declare a response queue
             .and_then(move |channel| {
-                let queue_name = options.queue_name().clone();
+                let queue_name = options.get_queue_name().unwrap().clone();
                 let queue_declare_options = QueueDeclareOptions {
                     passive: false,
                     durable: true,
@@ -179,9 +179,9 @@ impl Engine {
             })
             // 3. Link the response queue the exchange
             .and_then(move |(channel, queue, options)| {
-                let queue_name = options.queue_name().clone();
-                let endpoint = options.endpoint().clone();
-                let routing_key = options.queue_name().clone();
+                let queue_name = options.get_queue_name().unwrap().clone();
+                let endpoint = options.get_endpoint().unwrap().clone();
+                let routing_key = options.get_queue_name().unwrap().clone();
 
                 channel
                     .queue_bind(
@@ -208,9 +208,9 @@ impl Engine {
                     message_headers.insert(header_name, header_value);
                 }
 
-                let endpoint = options.endpoint().clone();
-                let message = options.message().clone();
-                let queue_name_response = options.queue_name().clone();
+                let endpoint = options.get_endpoint().unwrap().clone();
+                let message = options.get_message().unwrap().clone();
+                let queue_name_response = options.get_queue_name().unwrap().clone();
                 let event_name = message["event-name"].as_str().unwrap_or("null");
                 let basic_properties = BasicProperties::default()
                     .with_content_type("application/json".to_string())    // Content type
@@ -252,7 +252,7 @@ impl Engine {
                 let json = Arc::new(Box::new(json_parse(raw_data).unwrap()));
                 let serializer = Serializer::new();
                 let response = serializer.serialize(json.dump()).unwrap();
-                let transmitter = options.transmitter().clone();
+                let transmitter = options.get_transmitter().unwrap().clone();
                 transmitter.unbounded_send(response).unwrap();
 
                 channel
@@ -261,8 +261,8 @@ impl Engine {
             })
             // 7. Unbind the response queue from the exchange point
             .and_then(move |(channel, _queue, options)| {
-                let queue_name = options.queue_name().clone();
-                let endpoint = options.endpoint().clone();
+                let queue_name = options.get_queue_name().unwrap().clone();
+                let endpoint = options.get_endpoint().unwrap().clone();
 
                 channel
                     .queue_unbind(
@@ -281,7 +281,7 @@ impl Engine {
                     if_empty: false,
                     ..Default::default()
                 };
-                let queue_name = options.queue_name().clone();
+                let queue_name = options.get_queue_name().unwrap().clone();
 
                 channel
                     .queue_delete(&queue_name, queue_delete_options)

@@ -11,32 +11,60 @@ use super::serializer::JsonMessage;
 
 
 /// Simple wrapper for options that will be passed to futures.
+#[derive(Clone, Debug)]
 pub struct RpcOptions {
-    endpoint: ReadOnlyEndpoint,
-    message: JsonMessage,
-    transmitter: Arc<mpsc::UnboundedSender<Message>>,
-    queue_name: Arc<String>
+    endpoint: Option<ReadOnlyEndpoint>,
+    message: Option<JsonMessage>,
+    transmitter: Option<Arc<mpsc::UnboundedSender<Message>>>,
+    queue_name: Option<Arc<String>>
+}
+
+impl Default for RpcOptions {
+    fn default() -> RpcOptions {
+        RpcOptions {
+            endpoint: None,
+            message: None,
+            transmitter: None,
+            queue_name: None,
+        }
+    }
 }
 
 
 impl RpcOptions {
-    pub fn new(endpoint: ReadOnlyEndpoint, message: JsonMessage, transmitter: Arc<mpsc::UnboundedSender<Message>>, queue_name: Arc<String>) -> RpcOptions {
-        RpcOptions { endpoint, message, transmitter, queue_name }
+    pub fn with_endpoint(mut self, value: ReadOnlyEndpoint) -> RpcOptions {
+        self.endpoint = Some(value);
+        self
     }
 
-    pub fn endpoint(&self) -> &ReadOnlyEndpoint {
-        &self.endpoint
+    pub fn with_message(mut self, value: JsonMessage) -> RpcOptions {
+        self.message = Some(value);
+        self
     }
 
-    pub fn message(&self) -> &JsonMessage {
-        &self.message
+    pub fn with_transmitter(mut self, value: Arc<mpsc::UnboundedSender<Message>>) -> RpcOptions {
+        self.transmitter = Some(value);
+        self
     }
 
-    pub fn transmitter(&self) -> &Arc<mpsc::UnboundedSender<Message>> {
-        &self.transmitter
+    pub fn with_queue_name(mut self, value: Arc<String>) -> RpcOptions {
+        self.queue_name = Some(value);
+        self
     }
 
-    pub fn queue_name(&self) -> &Arc<String> {
-        &self.queue_name
+    pub fn get_endpoint(&self) -> Option<ReadOnlyEndpoint> {
+        self.endpoint.clone()
+    }
+
+    pub fn get_message(&self) -> Option<JsonMessage> {
+        self.message.clone()
+    }
+
+    pub fn get_transmitter(&self) -> Option<Arc<mpsc::UnboundedSender<Message>>> {
+        self.transmitter.clone()
+    }
+
+    pub fn get_queue_name(&self) -> Option<Arc<String>> {
+        self.queue_name.clone()
     }
 }
