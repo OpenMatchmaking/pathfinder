@@ -59,7 +59,11 @@ impl error::Error for PathfinderError {
         match *self {
             PathfinderError::Io(ref err) => err.description(),
             PathfinderError::SettingsError(ref err) => err.description(),
-            _ => "configuration error",
+            PathfinderError::InvalidEndpoint(ref msg) => msg,
+            PathfinderError::EndpointNotFound(ref msg) => msg,
+            PathfinderError::DecodingError(ref msg) => msg,
+            PathfinderError::AuthenticationError(ref msg) => msg,
+            PathfinderError::MessageBrokerError(ref msg) => msg
         }
     }
 
