@@ -262,13 +262,14 @@ impl Engine {
             // 7. Unbind the response queue from the exchange point
             .and_then(move |(channel, _queue, options)| {
                 let queue_name = options.get_queue_name().unwrap().clone();
+                let routing_key = options.get_queue_name().unwrap().clone();
                 let endpoint = options.get_endpoint().unwrap().clone();
 
                 channel
                     .queue_unbind(
                         &queue_name,
                         &endpoint.get_response_exchange(),
-                        &endpoint.get_microservice(),
+                        &routing_key,
                         QueueUnbindOptions::default(),
                         FieldTable::new(),
                     )
