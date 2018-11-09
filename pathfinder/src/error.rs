@@ -18,7 +18,7 @@ use self::config::ConfigError;
 pub type Result<T> = result::Result<T, PathfinderError>;
 
 /// An enum of all possible errors which could occur during the work of reverse proxy.
-#[derive(Debug)]
+#[derive(Debug, AsStaticStr)]
 pub enum PathfinderError {
     /// The error that occurred during work with I/O.
     Io(io::Error),
@@ -63,7 +63,7 @@ impl error::Error for PathfinderError {
             PathfinderError::EndpointNotFound(ref msg) => msg,
             PathfinderError::DecodingError(ref msg) => msg,
             PathfinderError::AuthenticationError(ref msg) => msg,
-            PathfinderError::MessageBrokerError(ref msg) => msg
+            PathfinderError::MessageBrokerError(ref msg) => msg,
         }
     }
 

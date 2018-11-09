@@ -19,6 +19,7 @@ use lapin_futures_rustls::lapin::channel::{
     QueueDeclareOptions, QueueDeleteOptions, QueueUnbindOptions,
 };
 use lapin_futures_rustls::lapin::types::{AMQPValue, FieldTable};
+use strum::AsStaticRef;
 use tungstenite::Message;
 use uuid::Uuid;
 
@@ -30,7 +31,7 @@ use engine::middleware::{EmptyMiddleware, JwtTokenMiddleware, Middleware, Middle
 use engine::router::{extract_endpoints, ReadOnlyEndpoint, Router};
 use engine::options::RpcOptions;
 use engine::serializer::{JsonMessage, Serializer};
-use engine::utils::{deserialize_message, wrap_an_error};
+use engine::utils::{deserialize_message, wrap_a_string_error};
 
 /// Alias type for msps sender.
 pub type MessageSender = Arc<mpsc::UnboundedSender<Message>>;
@@ -95,9 +96,10 @@ impl Engine {
             middleware_future
                 .and_then(move |_| rabbitmq_future)
                 .map_err(move |error| {
-                    let formatted_error = format!("{}", error);
-                    let error_message = wrap_an_error(formatted_error.as_str());
-                    transmitter_nested.unbounded_send(error_message).unwrap();
+                    let error_message = format!("{}", error);
+                    let error_type = error.as_static();
+                    let response = wrap_a_string_error(&error_type, error_message.as_str());
+                    transmitter_nested.unbounded_send(response).unwrap();
                     ()
                 })
         )
@@ -110,9 +112,10 @@ impl Engine {
         match deserialize_message(&message) {
             Ok(json_message) => Ok(json_message),
             Err(error) => {
-                let formatted_error = format!("{}", error);
-                let error_message = wrap_an_error(formatted_error.as_str());
-                transmitter_nested.unbounded_send(error_message).unwrap();
+                let error_message = format!("{}", error);
+                let error_type = error.as_static();
+                let response = wrap_a_string_error(&error_type, error_message.as_str());
+                transmitter_nested.unbounded_send(response).unwrap();
                 Err(error)
             }
         }
@@ -126,9 +129,10 @@ impl Engine {
         match router.match_url(&url) {
             Ok(endpoint) => Ok(endpoint),
             Err(error) => {
-                let formatted_error = format!("{}", error);
-                let error_message = wrap_an_error(formatted_error.as_str());
-                transmitter_nested.unbounded_send(error_message).unwrap();
+                let error_message = format!("{}", error);
+                let error_type = error.as_static();
+                let response = wrap_a_string_error(&error_type, error_message.as_str());
+                transmitter_nested.unbounded_send(response).unwrap();
                 Err(error)
             }
         }

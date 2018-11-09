@@ -20,4 +20,4 @@ pub use self::middleware::{
 pub use self::router::{extract_endpoints, Endpoint, ReadOnlyEndpoint, Router};
 pub use self::options::{RpcOptions};
 pub use self::serializer::{JsonMessage, Serializer};
-pub use self::utils::{deserialize_message, serialize_message, wrap_an_error};
+pub use self::utils::{deserialize_message, serialize_message, wrap_a_string_error};

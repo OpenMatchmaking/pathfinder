@@ -6,8 +6,8 @@ use super::super::error::Result;
 use super::serializer::{JsonMessage, Serializer};
 
 /// Transforms an error (which is a string) into JSON object in the special format.
-pub fn wrap_an_error(err: &str) -> Message {
-    let json_error_message = object!("details" => err);
+pub fn wrap_a_string_error(error_type: &str, err: &str) -> Message {
+    let json_error_message = object!("type" => error_type, "details" => err);
     let serializer = Serializer::new();
     serializer.serialize(json_error_message.dump()).unwrap()
 }
@@ -28,15 +28,15 @@ pub fn deserialize_message(message: &Message) -> Result<JsonMessage> {
 mod tests {
     use super::super::super::json::parse as json_parse;
     use super::super::super::tungstenite::Message;
-    use super::{deserialize_message, serialize_message, wrap_an_error};
+    use super::{deserialize_message, serialize_message, wrap_a_string_error};
     use std::sync::Arc;
 
     #[test]
-    fn test_wrap_an_error_returns_json_with_details_field() {
+    fn test_wrap_an_string_error_returns_json_with_details_field() {
         let error_string = "some error";
-        let dictionary = object!{"details" => error_string};
+        let dictionary = object!{"type" => "test", "details" => error_string};
         let expected = Message::Text(dictionary.dump());
-        let result = wrap_an_error(error_string);
+        let result = wrap_an_string_error("test", error_string);
 
         assert_eq!(result, expected);
     }

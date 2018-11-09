@@ -14,6 +14,9 @@ extern crate lapin_futures_tls_internal;
 #[macro_use]
 extern crate log;
 extern crate structopt;
+extern crate strum;
+#[macro_use]
+extern crate strum_macros;
 extern crate tokio;
 extern crate tokio_io;
 extern crate tokio_tcp;
