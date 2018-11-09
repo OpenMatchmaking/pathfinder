@@ -19,11 +19,12 @@ use cli::CliOptions;
 use futures::stream::Stream;
 use futures::sync::mpsc;
 use futures::{Future, Sink};
+use strum::AsStaticRef;
 use tokio::net::TcpListener;
 use tokio_tungstenite::accept_async;
 use tungstenite::protocol::Message;
 
-use engine::{Engine, MessageSender};
+use engine::{Engine, MessageSender, wrap_a_string_error};
 use error::PathfinderError;
 use rabbitmq::client::RabbitMQClient;
 use rabbitmq::utils::get_uri;
@@ -92,12 +93,17 @@ impl Proxy {
                             let addr_nested = addr.clone();
                             let connections_nested = connections_inner.clone();
                             let transmitter_nested = connections_nested.lock().unwrap()[&addr_nested].clone();
+                            let transmitter_for_errors = connections_nested.lock().unwrap()[&addr_nested].clone();
                             let rabbitmq_nested = rabbimq_local.clone();
-                            let process_request_future = engine_local.process_request(
-                                message,
-                                transmitter_nested,
-                                rabbitmq_nested,
-                            );
+                            let process_request_future = engine_local
+                                .process_request(message, transmitter_nested, rabbitmq_nested)
+                                .map_err(move |error: PathfinderError| {
+                                    let error_message = format!("{}", error);
+                                    let error_type = error.as_static();
+                                    let response = wrap_a_string_error(&error_type, error_message.as_str());
+                                    transmitter_for_errors.unbounded_send(response).unwrap();
+                                    ()
+                                });
 
                             tokio::spawn(process_request_future);
                             Ok(())

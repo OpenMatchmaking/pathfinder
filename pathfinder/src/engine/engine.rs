@@ -19,7 +19,6 @@ use lapin_futures_rustls::lapin::channel::{
     QueueDeclareOptions, QueueDeleteOptions, QueueUnbindOptions,
 };
 use lapin_futures_rustls::lapin::types::{AMQPValue, FieldTable};
-use strum::AsStaticRef;
 use tungstenite::Message;
 use uuid::Uuid;
 
@@ -31,7 +30,7 @@ use engine::middleware::{EmptyMiddleware, JwtTokenMiddleware, Middleware, Middle
 use engine::router::{extract_endpoints, ReadOnlyEndpoint, Router};
 use engine::options::RpcOptions;
 use engine::serializer::{JsonMessage, Serializer};
-use engine::utils::{deserialize_message, wrap_a_string_error};
+use engine::utils::{deserialize_message};
 
 /// Alias type for msps sender.
 pub type MessageSender = Arc<mpsc::UnboundedSender<Message>>;
@@ -67,75 +66,35 @@ impl Engine {
         }
     }
 
-    pub fn process_request(&self, message: Message, transmitter: MessageSender, rabbitmq_client: Arc<RabbitMQClient>) -> Box<Future<Item=(), Error=()> + Send + Sync + 'static> {
+    pub fn process_request(&self, message: Message, transmitter: MessageSender, rabbitmq_client: Arc<RabbitMQClient>) -> EngineFuture {
         // 1. Deserialize message into JSON
-        let json_message = match self.get_json_message(&message, transmitter.clone()) {
+        let json_message = match deserialize_message(&message) {
             Ok(json_message) => json_message,
-            Err(_error) => return Box::new(lazy(move || Ok(())))
+            Err(error) => return Box::new(lazy(move || Err(error)))
         };
 
         // 2. Finding an endpoint in according to the URL in the message body
         let url = json_message["url"].as_str().unwrap();
-        let endpoint = match self.get_endpoint(url, transmitter.clone()) {
+        let endpoint = match self.get_endpoint(url) {
             Ok(endpoint) => endpoint.clone(),
-            Err(_error) => return Box::new(lazy(move || Ok(())))
+            Err(error) => return Box::new(lazy(move || Err(error)))
         };
 
         // 3. Instantiate futures that will be processing client credentials and a request
         let rpc_options = Arc::new(RpcOptions::default()
             .with_endpoint(endpoint.clone())
             .with_message(json_message.clone())
-            .with_transmitter(transmitter.clone())
             .with_queue_name(Arc::new(format!("{}", Uuid::new_v4())))
         );
         let middleware_future = self.get_middleware_future(rabbitmq_client.clone(), rpc_options.clone());
-        let rabbitmq_future = self.rpc_request(rabbitmq_client.clone(), rpc_options.clone());
-
-        let transmitter_nested = transmitter.clone();
-        Box::new(
-            middleware_future
-                .and_then(move |_| rabbitmq_future)
-                .map_err(move |error| {
-                    let error_message = format!("{}", error);
-                    let error_type = error.as_static();
-                    let response = wrap_a_string_error(&error_type, error_message.as_str());
-                    transmitter_nested.unbounded_send(response).unwrap();
-                    ()
-                })
-        )
-    }
-
-    /// Returns a messsage in JSON format of a deserialization error.
-    fn get_json_message(&self, message: &Message, transmitter: MessageSender) -> Result<JsonMessage> {
-        let transmitter_nested = transmitter.clone();
-
-        match deserialize_message(&message) {
-            Ok(json_message) => Ok(json_message),
-            Err(error) => {
-                let error_message = format!("{}", error);
-                let error_type = error.as_static();
-                let response = wrap_a_string_error(&error_type, error_message.as_str());
-                transmitter_nested.unbounded_send(response).unwrap();
-                Err(error)
-            }
-        }
+        let rabbitmq_future = self.rpc_request(rabbitmq_client.clone(), transmitter.clone(), rpc_options.clone());
+        Box::new(middleware_future.and_then(move |_| rabbitmq_future))
     }
 
     /// Returns an endpoint based on specified URL.
-    fn get_endpoint(&self, url: &str, transmitter: MessageSender) -> Result<ReadOnlyEndpoint> {
+    fn get_endpoint(&self, url: &str) -> Result<ReadOnlyEndpoint> {
         let router = self.router.clone();
-        let transmitter_nested = transmitter.clone();
-
-        match router.match_url(&url) {
-            Ok(endpoint) => Ok(endpoint),
-            Err(error) => {
-                let error_message = format!("{}", error);
-                let error_type = error.as_static();
-                let response = wrap_a_string_error(&error_type, error_message.as_str());
-                transmitter_nested.unbounded_send(response).unwrap();
-                Err(error)
-            }
-        }
+        router.match_url(&url)
     }
 
     /// Returns a middleware for processing client credentials.
@@ -157,7 +116,7 @@ impl Engine {
     }
 
     /// Main handler for generating a response per each incoming request.
-    fn rpc_request(&self, rabbitmq_client: Arc<RabbitMQClient>, options: Arc<RpcOptions>) -> EngineFuture {
+    fn rpc_request(&self, rabbitmq_client: Arc<RabbitMQClient>, transmitter: MessageSender, options: Arc<RpcOptions>) -> EngineFuture {
         let message = options.get_message().unwrap().clone();
         let endpoint = options.get_endpoint().unwrap().clone();
         let request_headers = self.prepare_request_headers(&message, endpoint);
@@ -256,8 +215,8 @@ impl Engine {
                 let json = Arc::new(Box::new(json_parse(raw_data).unwrap()));
                 let serializer = Serializer::new();
                 let response = serializer.serialize(json.dump()).unwrap();
-                let transmitter = options.get_transmitter().unwrap().clone();
-                transmitter.unbounded_send(response).unwrap();
+                let transmitter_local = transmitter.clone();
+                transmitter_local.unbounded_send(response).unwrap();
 
                 channel
                     .basic_ack(message.delivery_tag, false)

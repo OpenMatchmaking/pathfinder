@@ -3,9 +3,6 @@
 
 use std::sync::Arc;
 
-use futures::sync::mpsc;
-use tungstenite::Message;
-
 use super::router::ReadOnlyEndpoint;
 use super::serializer::JsonMessage;
 
@@ -15,7 +12,6 @@ use super::serializer::JsonMessage;
 pub struct RpcOptions {
     endpoint: Option<ReadOnlyEndpoint>,
     message: Option<JsonMessage>,
-    transmitter: Option<Arc<mpsc::UnboundedSender<Message>>>,
     queue_name: Option<Arc<String>>
 }
 
@@ -24,7 +20,6 @@ impl Default for RpcOptions {
         RpcOptions {
             endpoint: None,
             message: None,
-            transmitter: None,
             queue_name: None,
         }
     }
@@ -42,11 +37,6 @@ impl RpcOptions {
         self
     }
 
-    pub fn with_transmitter(mut self, value: Arc<mpsc::UnboundedSender<Message>>) -> RpcOptions {
-        self.transmitter = Some(value);
-        self
-    }
-
     pub fn with_queue_name(mut self, value: Arc<String>) -> RpcOptions {
         self.queue_name = Some(value);
         self
@@ -58,10 +48,6 @@ impl RpcOptions {
 
     pub fn get_message(&self) -> Option<JsonMessage> {
         self.message.clone()
-    }
-
-    pub fn get_transmitter(&self) -> Option<Arc<mpsc::UnboundedSender<Message>>> {
-        self.transmitter.clone()
     }
 
     pub fn get_queue_name(&self) -> Option<Arc<String>> {
