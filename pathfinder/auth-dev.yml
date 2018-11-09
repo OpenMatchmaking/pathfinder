@@ -1,0 +1,6 @@
+endpoints:
+  - verify-token:
+      url: "auth/api/token/new"
+      microservice: "auth.token.new"
+      request_exchange: "open-matchmaking.auth.token.new.direct"
+      token_required: false
