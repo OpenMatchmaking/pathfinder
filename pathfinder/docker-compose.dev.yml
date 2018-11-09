@@ -13,7 +13,7 @@ services:
     volumes:
       - ./:/code/
     ports:
-      - "8080:8080"
+      - "9000:9000"
     tty: true
     depends_on:
       - rabbitmq
@@ -22,27 +22,81 @@ services:
     networks:
       - app-tier
 
-  redis:
-    image: "bitnami/redis:latest"
+  microservice_auth:
+    image: openmatchmaking/microservice-auth:0.2.0
     environment:
-      - ALLOW_EMPTY_PASSWORD=yes
-      # - REDIS_PASSWORD=super_secret_password
+      - APP_HOST=0.0.0.0
+      - APP_DEBUG=False
+      - APP_SERVER=sanic
+      - APP_CONFIG_PATH=./config.py
+      - REDIS_HOST=redis
+      - MONGODB_USERNAME=user
+      - MONGODB_PASSWORD=password
+      - MONGODB_HOST=mongodb
+      - MONGODB_DATABASE=auth
+    ports:
+      - "8000:8000"
+    depends_on:
+      - app
+      - mongodb
+      - redis
+    networks:
+      - app-tier
+    tty: true
+
+  mongodb:
+    image: bitnami/mongodb:4.1
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGODB_USERNAME=user
+      - MONGODB_PASSWORD=password
+      - MONGODB_DATABASE=auth
+      - MONGODB_ROOT_PASSWORD=root
+    networks:
+      - app-tier
+
+  mongodb_ui:
+    image: adicom/admin-mongo:latest
+    ports:
+      - "1234:1234"
+    environment:
+      - CONN_NAME=mongodb_connection
+      - DB_USERNAME=root
+      - DB_PASSWORD=root
+      - DB_HOST=mongodb
+    depends_on:
+      - mongodb
+    networks:
+      - app-tier
+
+  redis:
+    image: bitnami/redis:latest
     ports:
       - "6379:6379"
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+      - REDIS_EXTRA_FLAGS=--maxmemory 100mb
+    networks:
+      - app-tier
 
-  redis_commander_ui:
-    image: tenstartups/redis-commander
+  redis_ui:
+    image: tenstartups/redis-commander:latest
     command: --redis-host redis
+    ports:
+      - "8082:8081"
+    depends_on:
+      - redis
     links:
       - redis:redis
-    ports:
-      - "8081:8081"
+    networks:
+      - app-tier
 
   rabbitmq:
     image: bitnami/rabbitmq:latest
     ports:
-      - 5672:5672
-      - 15672:15672
+      - "5672:5672"
+      - "15672:15672"
     environment:
       - RABBITMQ_USERNAME=user
       - RABBITMQ_PASSWORD=password
