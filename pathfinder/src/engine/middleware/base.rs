@@ -1,6 +1,7 @@
 //! Middleware interfaces for the pathfinder project
 //!
 
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use futures::Future;
@@ -9,9 +10,11 @@ use engine::serializer::JsonMessage;
 use error::PathfinderError;
 use rabbitmq::RabbitMQClient;
 
+/// Type alias for dictionary with custom user headers
+pub type CustomUserHeaders = HashMap<String, String>;
 
 /// Type alias for future result type.
-pub type MiddlewareFuture = Box<Future<Item=(), Error=PathfinderError> + Sync + Send + 'static>;
+pub type MiddlewareFuture = Box<Future<Item=CustomUserHeaders, Error=PathfinderError> + Sync + Send + 'static>;
 
 /// A trait for types which can be used as middleware during processing a request from a client.
 pub trait Middleware: Send + Sync {
