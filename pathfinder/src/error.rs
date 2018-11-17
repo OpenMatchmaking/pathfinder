@@ -12,6 +12,8 @@ use std::fmt;
 use std::io;
 use std::result;
 
+use json::JsonValue;
+
 use self::config::ConfigError;
 
 /// Type alias for `Result` objects that return a Pathfinder error.
@@ -38,6 +40,8 @@ pub enum PathfinderError {
     AuthenticationError(String),
     /// The error that occurred with a message broker.
     MessageBrokerError(String),
+    /// The error that occurred when returned an error from a microservice.
+    MicroserviceError(JsonValue)
 }
 
 impl fmt::Display for PathfinderError {
@@ -50,23 +54,12 @@ impl fmt::Display for PathfinderError {
             PathfinderError::DecodingError(ref msg) => write!(f, "Decoding error: {}", msg),
             PathfinderError::AuthenticationError(ref msg) => write!(f, "Authentication error: {}", msg),
             PathfinderError::MessageBrokerError(ref msg) => write!(f, "{}", msg),
+            PathfinderError::MicroserviceError(ref json) => write!(f, "{:?}", json),
         }
     }
 }
 
 impl error::Error for PathfinderError {
-    fn description(&self) -> &str {
-        match *self {
-            PathfinderError::Io(ref err) => err.description(),
-            PathfinderError::SettingsError(ref err) => err.description(),
-            PathfinderError::InvalidEndpoint(ref msg) => msg,
-            PathfinderError::EndpointNotFound(ref msg) => msg,
-            PathfinderError::DecodingError(ref msg) => msg,
-            PathfinderError::AuthenticationError(ref msg) => msg,
-            PathfinderError::MessageBrokerError(ref msg) => msg,
-        }
-    }
-
     fn cause(&self) -> Option<&error::Error> {
         match *self {
             PathfinderError::Io(ref err) => Some(err),

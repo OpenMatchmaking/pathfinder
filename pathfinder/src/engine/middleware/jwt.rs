@@ -184,7 +184,7 @@ impl JwtTokenMiddleware {
                 let has_errors = !json["error"].is_null();
                 if has_errors {
                     let errors = json["error"].clone();
-                    return Err(PathfinderError::AuthenticationError(errors.dump()))
+                    return Err(PathfinderError::MicroserviceError(errors))
                 };
 
                 let is_valid_response = !json["content"].is_null();
@@ -349,7 +349,7 @@ impl JwtTokenMiddleware {
                 let has_errors = !json["error"].is_null();
                 if has_errors {
                     let errors = json["error"].clone();
-                    return Err(PathfinderError::AuthenticationError(errors.dump()))
+                    return Err(PathfinderError::MicroserviceError(errors))
                 };
 
                 let is_valid_response = !json["content"].is_null();

@@ -10,7 +10,6 @@
 //!
 
 use std::collections::HashMap;
-use std::error::Error;
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 
@@ -24,7 +23,7 @@ use tokio::net::TcpListener;
 use tokio_tungstenite::accept_async;
 use tungstenite::protocol::Message;
 
-use engine::{Engine, MessageSender, wrap_a_string_error};
+use engine::{Engine, MessageSender, serialize_message, wrap_a_string_error};
 use error::PathfinderError;
 use rabbitmq::client::RabbitMQClient;
 use rabbitmq::utils::get_uri;
@@ -95,12 +94,22 @@ impl Proxy {
                             let transmitter_nested = connections_nested.lock().unwrap()[&addr_nested].clone();
                             let transmitter_for_errors = connections_nested.lock().unwrap()[&addr_nested].clone();
                             let rabbitmq_nested = rabbimq_local.clone();
+
                             let process_request_future = engine_local
                                 .process_request(message, transmitter_nested, rabbitmq_nested)
                                 .map_err(move |error: PathfinderError| {
-                                    let error_message = format!("{}", error);
-                                    let error_type = error.as_static();
-                                    let response = wrap_a_string_error(&error_type, error_message.as_str());
+                                    let response = match error {
+                                        PathfinderError::MicroserviceError(json) => {
+                                            let message = Arc::new(Box::new(json));
+                                            serialize_message(message)
+                                        },
+                                        _ => {
+                                            let error_message = format!("{}", error);
+                                            let error_type = error.as_static();
+                                            wrap_a_string_error(&error_type, error_message.as_str())
+                                        },
+                                    };
+
                                     transmitter_for_errors.unbounded_send(response).unwrap();
                                     ()
                                 });
@@ -132,7 +141,7 @@ impl Proxy {
                     })
                     // An error occurred during the WebSocket handshake
                     .or_else(|error| {
-                        debug!("{}", error.description());
+                        debug!("{}", error);
                         Ok(())
                     })
             })
