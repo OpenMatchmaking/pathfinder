@@ -25,7 +25,6 @@ impl Default for RpcOptions {
     }
 }
 
-
 impl RpcOptions {
     pub fn with_endpoint(mut self, value: ReadOnlyEndpoint) -> RpcOptions {
         self.endpoint = Some(value);
