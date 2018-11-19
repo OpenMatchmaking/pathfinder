@@ -1,4 +1,4 @@
-version: "2"
+version: "3"
 
 networks:
   app-tier:
@@ -25,7 +25,6 @@ services:
   microservice_auth:
     image: openmatchmaking/microservice-auth:0.2.0
     environment:
-      - APP_HOST=0.0.0.0
       - APP_DEBUG=False
       - APP_SERVER=sanic
       - APP_CONFIG_PATH=./config.py
@@ -34,10 +33,13 @@ services:
       - MONGODB_PASSWORD=password
       - MONGODB_HOST=mongodb
       - MONGODB_DATABASE=auth
-    ports:
-      - "8000:8000"
     depends_on:
       - app
+      - rabbitmq
+      - mongodb
+      - redis
+    links:
+      - rabbitmq
       - mongodb
       - redis
     networks:
