@@ -90,7 +90,7 @@ fn get_value_as_bool(conf: &HashMap<String, Value>, key: &str, default: bool) ->
             let raw_value = value.to_owned().into_str().unwrap();
             bool::from_str(&raw_value).unwrap_or(default)
         }
-        _ => false
+        _ => default
     }
 }
 
@@ -119,7 +119,7 @@ pub fn extract_endpoints(conf: Box<Config>) -> HashMap<String, ReadOnlyEndpoint>
             }
             Err(_) => {
                 let error = format!("endpoint \"{}\" is invalid.", endpoint);
-                println!("{}", PathfinderError::InvalidEndpoint(error));
+                warn!("{}", PathfinderError::InvalidEndpoint(error));
                 continue;
             }
         };
@@ -138,7 +138,7 @@ pub fn extract_endpoints(conf: Box<Config>) -> HashMap<String, ReadOnlyEndpoint>
                 "keys {:?} for {} endpoint is missing.",
                 missing_fields, endpoint
             );
-            println!("{}", PathfinderError::InvalidEndpoint(error));
+            warn!("{}", PathfinderError::InvalidEndpoint(error));
             continue;
         }
 
@@ -146,7 +146,7 @@ pub fn extract_endpoints(conf: Box<Config>) -> HashMap<String, ReadOnlyEndpoint>
         let routing_key = get_value_as_str(&configuration, "routing_key", "");
         let request_exchange = get_value_as_str(&configuration, "request_exchange", &default_request_exchange);
         let response_exchange = get_value_as_str(&configuration, "response_exchange", &default_response_exchange);
-        let is_token_required = get_value_as_bool(&configuration, "token_required", false);
+        let is_token_required = get_value_as_bool(&configuration, "token_required", true);
         let endpoint = Endpoint::new(&url, &routing_key, &request_exchange, &response_exchange, is_token_required);
         endpoints.insert(url, Arc::new(endpoint));
     }

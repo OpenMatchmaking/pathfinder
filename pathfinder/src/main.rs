@@ -44,7 +44,7 @@ fn main() {
     let cli = CliOptions::from_args();
     match setup_logger(&cli) {
         Ok(_) => {}
-        Err(err) => println!("Logger isn't instantiated: {}", err),
+        Err(err) => warn!("Logger isn't instantiated: {}", err),
     };
 
     let proxy = Box::new(Proxy::new(&cli));

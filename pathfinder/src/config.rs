@@ -14,7 +14,7 @@ pub fn get_config(file_path: &str) -> Box<Config> {
     if file_path != "" {
         conf.merge(File::with_name(file_path))
             .map_err(|err| {
-                println!(
+                error!(
                     "Error during reading file: {}. \
                      Changes won't applied.",
                     err
