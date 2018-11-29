@@ -36,7 +36,7 @@ mod tests {
         let error_string = "some error";
         let dictionary = object!{"type" => "test", "details" => error_string};
         let expected = Message::Text(dictionary.dump());
-        let result = wrap_an_string_error("test", error_string);
+        let result = wrap_a_string_error("test", error_string);
 
         assert_eq!(result, expected);
     }

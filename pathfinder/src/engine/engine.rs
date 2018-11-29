@@ -132,7 +132,7 @@ impl Engine {
     /// Generates default headers for the message.
     fn generate_default_headers(&self, json: &JsonMessage, endpoint: ReadOnlyEndpoint) -> HashMap<String, String> {
         [
-            (String::from("microservice_name"), endpoint.get_microservice()),
+            (String::from("routing_key"), endpoint.get_routing_key()),
             (String::from("request_url"), endpoint.get_url()),
             (String::from("permissions"), json["permissions"].as_str().unwrap_or("").to_string()),
             (String::from("user_id"), json["user_id"].as_str().unwrap_or("").to_string()),

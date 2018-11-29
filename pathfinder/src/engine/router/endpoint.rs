@@ -29,7 +29,7 @@ pub type ReadOnlyEndpoint = Arc<Endpoint>;
 #[derive(Debug, Clone)]
 pub struct Endpoint {
     url: String,
-    microservice: String,
+    routing_key: String,
     request_exchange: String,
     response_exchange: String,
     is_token_required: bool
@@ -37,10 +37,10 @@ pub struct Endpoint {
 
 impl Endpoint {
     /// Returns a new instance of `Endpoint`.
-    pub fn new(url: &str, microservice: &str, request_exchange: &str, response_exchange: &str, is_token_required: bool) -> Endpoint {
+    pub fn new(url: &str, routing_key: &str, request_exchange: &str, response_exchange: &str, is_token_required: bool) -> Endpoint {
         Endpoint {
             url: url.to_string(),
-            microservice: microservice.to_string(),
+            routing_key: routing_key.to_string(),
             request_exchange: request_exchange.to_string(),
             response_exchange: response_exchange.to_string(),
             is_token_required: is_token_required
@@ -52,9 +52,9 @@ impl Endpoint {
         self.url.clone()
     }
 
-    /// Returns a microservice name.
-    pub fn get_microservice(&self) -> String {
-        self.microservice.clone()
+    /// Returns a routing key (which can considered as the microservice) name.
+    pub fn get_routing_key(&self) -> String {
+        self.routing_key.clone()
     }
 
     /// Returns a request exchange point name.
@@ -126,7 +126,7 @@ pub fn extract_endpoints(conf: Box<Config>) -> HashMap<String, ReadOnlyEndpoint>
 
         // Check on required fields
         let mut missing_fields = Vec::new();
-        let required_fields: HashSet<&str> = ["url", "microservice"].iter().cloned().collect();
+        let required_fields: HashSet<&str> = ["url", "routing_key"].iter().cloned().collect();
         for key in required_fields {
             if !configuration.contains_key(key) {
                 missing_fields.push(key);
@@ -143,11 +143,11 @@ pub fn extract_endpoints(conf: Box<Config>) -> HashMap<String, ReadOnlyEndpoint>
         }
 
         let url = get_value_as_str(&configuration, "url", "");
-        let microservice = get_value_as_str(&configuration, "microservice", "");
+        let routing_key = get_value_as_str(&configuration, "routing_key", "");
         let request_exchange = get_value_as_str(&configuration, "request_exchange", &default_request_exchange);
         let response_exchange = get_value_as_str(&configuration, "response_exchange", &default_response_exchange);
         let is_token_required = get_value_as_bool(&configuration, "token_required", false);
-        let endpoint = Endpoint::new(&url, &microservice, &request_exchange, &response_exchange, is_token_required);
+        let endpoint = Endpoint::new(&url, &routing_key, &request_exchange, &response_exchange, is_token_required);
         endpoints.insert(url, Arc::new(endpoint));
     }
 
@@ -200,10 +200,10 @@ mod tests {
     #[test]
     fn test_get_url() {
         let url = "/api/matchmaking/test";
-        let microservice_name = "api.matchmaking.test";
+        let routing_key = "api.matchmaking.test";
         let request_exchange = "open-matchmaking.direct";
         let respone_exchange = "open-matchmaking.responses.direct";
-        let endpoint = Endpoint::new(url, microservice_name, request_exchange, respone_exchange, false);
+        let endpoint = Endpoint::new(url, routing_key, request_exchange, respone_exchange, false);
 
         assert_eq!(endpoint.get_url(), url);
     }
@@ -211,21 +211,21 @@ mod tests {
     #[test]
     fn test_get_microservice_name() {
         let url = "/api/matchmaking/test";
-        let microservice_name = "api.matchmaking.test";
+        let routing_key = "api.matchmaking.test";
         let request_exchange = "open-matchmaking.direct";
         let respone_exchange = "open-matchmaking.responses.direct";
-        let endpoint = Endpoint::new(url, microservice_name, request_exchange, respone_exchange, false);
+        let endpoint = Endpoint::new(url, routing_key, request_exchange, respone_exchange, false);
 
-        assert_eq!(endpoint.get_microservice(), microservice_name);
+        assert_eq!(endpoint.get_routing_key(), routing_key);
     }
 
     #[test]
     fn test_get_request_exchange() {
         let url = "/api/matchmaking/test";
-        let microservice_name = "api.matchmaking.test";
+        let routing_key = "api.matchmaking.test";
         let request_exchange = "open-matchmaking.direct";
         let respone_exchange = "open-matchmaking.responses.direct";
-        let endpoint = Endpoint::new(url, microservice_name, request_exchange, respone_exchange, false);
+        let endpoint = Endpoint::new(url, routing_key, request_exchange, respone_exchange, false);
 
         assert_eq!(endpoint.get_request_exchange(), request_exchange);
     }
@@ -233,10 +233,10 @@ mod tests {
     #[test]
     fn test_get_response_exchange() {
         let url = "/api/matchmaking/test";
-        let microservice_name = "api.matchmaking.test";
+        let routing_key = "api.matchmaking.test";
         let request_exchange = "open-matchmaking.direct";
         let respone_exchange = "open-matchmaking.responses.direct";
-        let endpoint = Endpoint::new(url, microservice_name, request_exchange, respone_exchange, false);
+        let endpoint = Endpoint::new(url, routing_key, request_exchange, respone_exchange, false);
 
         assert_eq!(endpoint.get_response_exchange(), respone_exchange);
     }
@@ -244,10 +244,10 @@ mod tests {
     #[test]
     fn test_is_token_required_returns_false() {
         let url = "/api/matchmaking/test";
-        let microservice_name = "api.matchmaking.test";
+        let routing_key = "api.matchmaking.test";
         let request_exchange = "open-matchmaking.direct";
         let respone_exchange = "open-matchmaking.responses.direct";
-        let endpoint = Endpoint::new(url, microservice_name, request_exchange, respone_exchange, true);
+        let endpoint = Endpoint::new(url, routing_key, request_exchange, respone_exchange, true);
 
         assert_eq!(endpoint.is_token_required(), true);
     }
@@ -255,10 +255,10 @@ mod tests {
     #[test]
     fn test_is_token_required_returns_true() {
         let url = "/api/matchmaking/test";
-        let microservice_name = "api.matchmaking.test";
+        let routing_key = "api.matchmaking.test";
         let request_exchange = "open-matchmaking.direct";
         let respone_exchange = "open-matchmaking.responses.direct";
-        let endpoint = Endpoint::new(url, microservice_name, request_exchange, respone_exchange, false);
+        let endpoint = Endpoint::new(url, routing_key, request_exchange, respone_exchange, false);
 
         assert_eq!(endpoint.is_token_required(), false);
     }

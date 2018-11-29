@@ -95,7 +95,7 @@ pub fn rpc_request_future(
             channel
                 .basic_publish(
                     &endpoint.get_request_exchange(),
-                    &endpoint.get_microservice(),
+                    &endpoint.get_routing_key(),
                     message["content"].dump().as_bytes().to_vec(),
                     publish_message_options,
                     basic_properties

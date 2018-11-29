@@ -1,6 +1,6 @@
 endpoints:
   - leaderboard:
       url: "/api/matchmaking/leaderboard"
-      microservice: "microservice.leaderboard"
+      routing_key: "microservice.leaderboard"
       request_exchange: "amqp.direct"
       response_exchange:  "open-matchmaking.default"

@@ -89,7 +89,7 @@ mod tests {
         assert_eq!(result_match.is_ok(), true);
         let endpoint = result_match.unwrap();
         assert_eq!(endpoint.get_url(), "/api/matchmaking/search");
-        assert_eq!(endpoint.get_microservice(), "microservice.search");
+        assert_eq!(endpoint.get_routing_key(), "microservice.search");
     }
 
     #[test]
