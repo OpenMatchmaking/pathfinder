@@ -40,12 +40,13 @@ impl JwtTokenMiddleware {
         JwtTokenMiddleware {}
     }
 
-    fn verify_token(&self, token: String, rabbitmq_client: Arc<RabbitMQClient>)
+    fn verify_token(&self, message: JsonMessage, token: String, rabbitmq_client: Arc<RabbitMQClient>)
         -> impl Future<Item=(), Error=PathfinderError> + Sync + Send + 'static
     {
         let access_token = token.clone();
         let rabbitmq_client_local = rabbitmq_client.clone();
         let options = Arc::new(RpcOptions::default()
+            .with_message(message.clone())
             .with_queue_name(Arc::new(format!("{}", Uuid::new_v4())))
         );
 
@@ -90,7 +91,7 @@ impl JwtTokenMiddleware {
             };
 
             let request_headers: Vec<(String, String)> = vec![
-                (String::from("microservice_name"), String::from("microservice-auth")),
+                (String::from("routing_key"), String::from("auth.token.verify")),
                 (String::from("request_url"), String::from("/auth/api/token/verify")),
             ];
             let mut message_headers = FieldTable::new();
@@ -205,12 +206,13 @@ impl JwtTokenMiddleware {
         })
     }
 
-    fn get_headers(&self, token: String, rabbitmq_client: Arc<RabbitMQClient>)
+    fn get_headers(&self, message: JsonMessage, token: String, rabbitmq_client: Arc<RabbitMQClient>)
         -> impl Future<Item=CustomUserHeaders, Error=PathfinderError> + Sync + Send + 'static
     {
         let access_token = token.clone();
         let rabbitmq_client_local = rabbitmq_client.clone();
         let options = Arc::new(RpcOptions::default()
+            .with_message(message.clone())
             .with_queue_name(Arc::new(format!("{}", Uuid::new_v4())))
         );
 
@@ -385,8 +387,8 @@ impl Middleware for JwtTokenMiddleware {
         };
 
         // Verify the passed JSON Web Token and extract permissions
-        let verify_token_future = self.verify_token(token.clone(), rabbitmq_client.clone());
-        let get_headers_future = self.get_headers(token.clone(), rabbitmq_client.clone());
+        let verify_token_future = self.verify_token(message.clone(),token.clone(), rabbitmq_client.clone());
+        let get_headers_future = self.get_headers(message.clone(),token.clone(), rabbitmq_client.clone());
         Box::new(verify_token_future.and_then(move |_| get_headers_future))
     }
 }
