@@ -1,6 +1,23 @@
 endpoints:
-  - verify-token:
+  - generate-token:
       url: "auth/api/token/new"
-      microservice: "auth.token.new"
+      routing_key: "auth.token.new"
       request_exchange: "open-matchmaking.auth.token.new.direct"
+      token_required: false
+  - verify-token:
+      url: "auth/auth/token/verify"
+      routing_key: "auth.token.verify"
+      request_exchange: "open-matchmaking.auth.token.verify.direct"
+  - refresh-token:
+      url: "auth/auth/token/refresh"
+      routing_key: "auth.token.refresh"
+      request_exchange: "open-matchmaking.auth.token.refresh.direct"
+  - get-user:
+      url: "auth/api/users/retrieve"
+      routing_key: "auth.users.retrieve"
+      request_exchange: "open-matchmaking.auth.users.retrieve.direct"
+  - register-user:
+      url: "auth/api/users/register"
+      routing_key: "auth.users.register"
+      request_exchange: "open-matchmaking.auth.users.register.direct"
       token_required: false
