@@ -3,7 +3,7 @@ An asynchronous WebSocket-over-RabbitMQ reverse proxy, based on the tokio and fu
 
 # Features
 - Configuring a behaviour of the reverse proxy via CLI options and YAML files
-- Communicating with Auth/Auth microservice for validating a JSON Web Token for getting an access to other microservices
+- Communicating with Auth/Auth microservice for validating a JSON Web Token, getting a list of permissions before getting an access to other microservices
 - Transferring requests to the certain microservices via RabbitMQ queues and returning responses in JSON format
 
 # Usage
@@ -39,19 +39,20 @@ pathfinder --config=myconfig.yaml -p 8001
 At the current stage of this project, reverse proxy is support only endpoints list, which is using for mapping URLs into certain Kafka topics.
 Each of those endpoints contains four fields:
 - `url` - URL that specified by a client in each request. Required.
-- `microservice` - Means the name of topic (or queue) where will be storing the message. This topic (or queue) is listening by certain microservice. Required.
+- `routing_key` - Means the name of topic (or queue) where will be storing the message. This topic (or queue) is listening by certain microservice. Required.
 - `request_exchange` - Defines the name of exchange point for RabbitMQ, through which the reverse proxy should publish a message. Optional. Default: `"open-matchmaking.direct"`
 - `response_exchange` - Defines the name of exchange point for RabbitMQ, through which the reverse proxy should consume a message. Optional. Default: `"open-matchmaking.responses.direct"`
+- `token_required` - Defines does the endpoint need any extra checks for credentials before getting an access to it. Optional. Default: `true`.
 
 ### Example
 ```yaml
 endpoints:
   - search:
       url: "/api/matchmaking/search"
-      microservice: "microservice.search"
+      routing_key: "microservice.search"
   - leaderboard:
       url: "/api/matchmaking/leaderboard"
-      microservice: "microservice.leaderboard"
+      routing_key: "microservice.leaderboard"
       request_exchange: "amqp.direct"
       response_exchange:  "open-matchmaking.default.direct"
 ```
