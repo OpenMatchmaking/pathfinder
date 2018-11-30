@@ -9,72 +9,62 @@
 //! format.
 //!
 
-use std::collections::{HashMap};
-use std::error::{Error};
-use std::net::{SocketAddr};
+use std::collections::HashMap;
+use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 
-use amq_protocol::uri::{AMQPUri};
-use cli::{CliOptions};
-use futures::sync::{mpsc};
+use amq_protocol::uri::AMQPUri;
+use cli::CliOptions;
+use futures::stream::Stream;
+use futures::sync::mpsc;
 use futures::{Future, Sink};
-use futures::stream::{Stream};
-use tokio::net::{TcpListener};
-use tokio_tungstenite::{accept_async};
-use tungstenite::protocol::{Message};
+use strum::AsStaticRef;
+use tokio::net::TcpListener;
+use tokio_tungstenite::accept_async;
+use tungstenite::protocol::Message;
 
-use auth::middleware::{Middleware, EmptyMiddleware};
-use auth::token::middleware::{JwtTokenMiddleware};
-use engine::{Engine};
-use error::{PathfinderError};
-use rabbitmq::client::{RabbitMQClient};
-use rabbitmq::utils::{get_uri};
-
+use engine::{Engine, MessageSender, serialize_message, wrap_a_string_error};
+use error::PathfinderError;
+use rabbitmq::client::RabbitMQClient;
+use rabbitmq::utils::get_uri;
 
 /// A reverse proxy application.
 pub struct Proxy {
     engine: Arc<Engine>,
     amqp_uri: Arc<AMQPUri>,
-    connections: Arc<Mutex<HashMap<SocketAddr, mpsc::UnboundedSender<Message>>>>,
-    auth_middleware: Arc<Box<Middleware>>,
+    connections: Arc<Mutex<HashMap<SocketAddr, MessageSender>>>
 }
-
 
 impl Proxy {
     /// Returns a new instance of a reverse proxy application.
     pub fn new(cli: &CliOptions) -> Proxy {
         let engine = Engine::new(cli);
         let amqp_uri = get_uri(cli);
-        let auth_middleware: Box<Middleware> = match cli.validate {
-            true => Box::new(JwtTokenMiddleware::new(cli)),
-               _ => Box::new(EmptyMiddleware::new(cli))
-        };
 
         Proxy {
             engine: Arc::new(engine),
             amqp_uri: Arc::new(amqp_uri),
-            connections: Arc::new(Mutex::new(HashMap::new())),
-            auth_middleware: Arc::new(auth_middleware),
+            connections: Arc::new(Mutex::new(HashMap::new()))
         }
     }
 
-    /// Run the server on the specified address and port.
+    /// Run the server on the specified address and the port.
     pub fn run(&self, address: SocketAddr) {
         let listener = TcpListener::bind(&address).unwrap();
         info!("Listening on: {}", address);
 
         let engine = self.engine.clone();
         let connections = self.connections.clone();
-        let auth_middleware = self.auth_middleware.clone();
 
         let server = |rabbitmq: Arc<RabbitMQClient>| {
             listener.incoming().for_each(move |stream| {
-                let addr = stream.peer_addr().expect("Connected stream should have a peer address.");
+                let addr = stream
+                    .peer_addr()
+                    .expect("Connected stream should have a peer address.");
 
                 let engine_local = engine.clone();
                 let rabbimq_local = rabbitmq.clone();
                 let connections_local = connections.clone();
-                let auth_middleware_local = auth_middleware.clone();
 
                 accept_async(stream)
                     // Process the messages
@@ -87,7 +77,7 @@ impl Proxy {
                         // send us messages. It could be used for broadcasting your data to
                         // another users in the future.
                         let (tx, rx) = mpsc::unbounded();
-                        connection_for_insert.lock().unwrap().insert(addr, tx);
+                        connection_for_insert.lock().unwrap().insert(addr, Arc::new(tx));
 
                         // Split the WebSocket stream so that it will be possible to work
                         // with the reading and writing halves separately.
@@ -95,43 +85,33 @@ impl Proxy {
 
                         // Read and process each message
                         let ws_reader = stream.for_each(move |message: Message| {
-
                             // Get references to required components
                             let addr_nested = addr.clone();
-                            let engine_nested = engine_local.clone();
                             let connections_nested = connections_inner.clone();
-                            let transmitter_nested = &connections_nested.lock().unwrap()[&addr_nested];
-                            let transmitter_nested2 = transmitter_nested.clone();
+                            let transmitter_nested = connections_nested.lock().unwrap()[&addr_nested].clone();
+                            let transmitter_for_errors = connections_nested.lock().unwrap()[&addr_nested].clone();
+                            let rabbitmq_nested = rabbimq_local.clone();
 
-                            // 1. Deserialize message into JSON
-                            let json_message = match engine_local.deserialize_message(&message) {
-                                Ok(json_message) => json_message,
-                                Err(error) => {
-                                    let formatted_error = format!("{}", error);
-                                    let error_message = engine_nested.wrap_an_error(formatted_error.as_str());
-                                    transmitter_nested.unbounded_send(error_message).unwrap();
-                                    return Ok(())
-                                }
-                            };
+                            let process_request_future = engine_local
+                                .process_request(message, transmitter_nested, rabbitmq_nested)
+                                .map_err(move |error: PathfinderError| {
+                                    let response = match error {
+                                        PathfinderError::MicroserviceError(json) => {
+                                            let message = Arc::new(Box::new(json));
+                                            serialize_message(message)
+                                        },
+                                        _ => {
+                                            let error_message = format!("{}", error);
+                                            let error_type = error.as_static();
+                                            wrap_a_string_error(&error_type, error_message.as_str())
+                                        },
+                                    };
 
-                            // 2. Apply a middleware to each incoming message
-                            let auth_future = auth_middleware_local.process_request(json_message.clone());
-
-                            // 3. Put request into a queue in RabbitMQ and receive the response
-                            let rabbitmq_future = engine_local.handle(
-                                json_message.clone(), transmitter_nested.clone(), rabbimq_local.clone()
-                            );
-
-                            let processing_request_future = auth_future
-                                .and_then(move |_| rabbitmq_future)
-                                .map_err(move |error| {
-                                    let formatted_error = format!("{}", error);
-                                    let error_message = engine_nested.wrap_an_error(formatted_error.as_str());
-                                    transmitter_nested2.unbounded_send(error_message).unwrap();
+                                    transmitter_for_errors.unbounded_send(response).unwrap();
                                     ()
                                 });
 
-                            tokio::spawn(processing_request_future);
+                            tokio::spawn(process_request_future);
                             Ok(())
                         });
 
@@ -142,7 +122,9 @@ impl Proxy {
                         });
 
                         // Wait for either half to be done to tear down the other
-                        let connection = ws_reader.map(|_| ()).map_err(|_| ())
+                        let connection = ws_reader
+                            .map(|_| ())
+                            .map_err(|_| ())
                             .select(ws_writer.map(|_| ()).map_err(|_| ()));
 
                         // Close the connection after using
@@ -156,19 +138,19 @@ impl Proxy {
                     })
                     // An error occurred during the WebSocket handshake
                     .or_else(|error| {
-                        debug!("{}", error.description());
+                        debug!("{}", error);
                         Ok(())
                     })
             })
         };
 
         // Run the server
-        let server_future = self.get_rabbitmq_client()
+        let server_future = self
+            .get_rabbitmq_client()
             .map_err(|error| {
                 error!("Lapin error: {:?}", error);
                 ()
-            })
-            .and_then(|rabbitmq: Arc<RabbitMQClient>| {
+            }).and_then(|rabbitmq: Arc<RabbitMQClient>| {
                 server(rabbitmq)
                     .map_err(|_error| ())
             });
@@ -176,14 +158,12 @@ impl Proxy {
         tokio::runtime::run(server_future);
     }
 
-    fn get_rabbitmq_client(&self)
-        -> impl Future<Item=Arc<RabbitMQClient>, Error=PathfinderError> + Sync + Send + 'static
-    {
+    fn get_rabbitmq_client(&self) -> impl Future<Item=Arc<RabbitMQClient>, Error=PathfinderError> + Sync + Send + 'static {
         let amqp_uri = self.amqp_uri.clone();
         RabbitMQClient::connect(amqp_uri.as_ref())
             .map(|client| Arc::new(client))
             .map_err(|error| {
-                error!("Error in RabbitMQ Client. Reason: {:?}", error);
+                error!("Error in RabbitMQ client. Reason: {:?}", error);
                 PathfinderError::Io(error)
             })
     }

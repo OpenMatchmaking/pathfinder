@@ -1,17 +1,16 @@
-//! Serializer and deserializer structure for a data
+//! Serializer and deserializer structure for a data.
 //!
 //! This module is intended for transforming incoming data (which are
 //! `tungstenite::Message` objects) to JSON objects and preparing responses
 //! for client before sending through transmitters.
 //!
 
-use std::sync::{Arc};
+use std::sync::Arc;
 
-use super::super::error::{Result, PathfinderError};
+use error::{PathfinderError, Result};
 
 use json::{parse as parse_json, JsonValue};
-use tungstenite::{Message};
-
+use tungstenite::protocol::Message;
 
 /// Type alias for JSON object
 pub type JsonMessage = Arc<Box<JsonValue>>;
@@ -33,7 +32,7 @@ pub type JsonMessage = Arc<Box<JsonValue>>;
 /// println!("{:?}", instance.serialize(response))
 /// ```
 ///
-/// Derializing a message to JSON object:
+/// Deserializing a message to JSON object:
 ///
 /// ```
 /// use engine::{Serializer};
@@ -45,9 +44,7 @@ pub type JsonMessage = Arc<Box<JsonValue>>;
 /// println!("{:?}", instance.deserialize(&message))
 /// ```
 ///
-pub struct Serializer {
-}
-
+pub struct Serializer;
 
 impl Serializer {
     /// Returns a new instance of `Serializer`.
@@ -64,10 +61,10 @@ impl Serializer {
 
     /// Transforms an instance of the `tungstenite::Message` type into JSON object.
     pub fn deserialize(&self, message: &Message) -> Result<JsonMessage> {
-         let text_message = self.parse_into_text(message)?;
-         let mut json_message = self.parse_into_json(text_message.as_str())?;
-         json_message = self.validate_json(json_message)?;
-         Ok(json_message)
+        let text_message = self.parse_into_text(message)?;
+        let mut json_message = self.parse_into_json(text_message.as_str())?;
+        json_message = self.validate_json(json_message)?;
+        Ok(json_message)
     }
 
     /// Parses an instance of the `tungstenite::Message` type and returns a UTF-8
@@ -77,7 +74,7 @@ impl Serializer {
             Ok(text_message) => Ok(text_message),
             Err(err) => {
                 let formatted_message = format!("{}", err);
-                return Err(PathfinderError::DecodingError(formatted_message))
+                return Err(PathfinderError::DecodingError(formatted_message));
             }
         }
     }
@@ -88,7 +85,7 @@ impl Serializer {
             Ok(message) => Ok(Arc::new(Box::new(message))),
             Err(err) => {
                 let formatted_message = format!("{}", err);
-                return Err(PathfinderError::DecodingError(formatted_message))
+                return Err(PathfinderError::DecodingError(formatted_message));
             }
         }
     }
@@ -96,12 +93,12 @@ impl Serializer {
     /// Validates a JSON object on required fields and values.
     fn validate_json(&self, json: JsonMessage) -> Result<JsonMessage> {
         if json["url"].is_null() {
-            let error_message = String::from("Key `url` is missing or value is `null`");
+            let error_message = String::from("The `url` field is missing or value is `null`");
             return Err(PathfinderError::DecodingError(error_message));
         }
 
         if json.has_key("microservice") {
-            let error_message = String::from("Key `microservice` must be not specified");
+            let error_message = String::from("The `microservice` field must not be specified");
             return Err(PathfinderError::DecodingError(error_message));
         }
 
@@ -109,13 +106,11 @@ impl Serializer {
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
-    use super::{Serializer};
-    use super::super::super::json::{Null};
-    use super::super::super::tungstenite::{Message};
+    use super::super::super::json::Null;
+    use super::super::super::tungstenite::Message;
+    use super::Serializer;
 
     #[test]
     fn test_serialize_returns_a_new_message_instance() {
@@ -179,7 +174,7 @@ mod tests {
         assert_eq!(result.is_err(), true);
         assert_eq!(
             format!("{}", result.unwrap_err()),
-            "Decoding error: Key `url` is missing or value is `null`"
+            "Decoding error: The `url` field is missing or value is `null`"
         )
     }
 
@@ -193,7 +188,7 @@ mod tests {
         assert_eq!(result.is_err(), true);
         assert_eq!(
             format!("{}", result.unwrap_err()),
-            "Decoding error: Key `url` is missing or value is `null`"
+            "Decoding error: The `url` field is missing or value is `null`"
         )
     }
 
@@ -207,7 +202,7 @@ mod tests {
         assert_eq!(result.is_err(), true);
         assert_eq!(
             format!("{}", result.unwrap_err()),
-            "Decoding error: Key `microservice` must be not specified"
+            "Decoding error: The `microservice` field must not be specified"
         )
     }
 }

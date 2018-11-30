@@ -5,7 +5,6 @@ extern crate config;
 
 use self::config::{Config, File};
 
-
 /// Returns a configuration for the application with data that was
 /// read from a file. When specified an empty string, returns a
 /// default configuration.
@@ -14,21 +13,22 @@ pub fn get_config(file_path: &str) -> Box<Config> {
 
     if file_path != "" {
         conf.merge(File::with_name(file_path))
-            .map_err(|err|
-                println!("Error during reading file: {}. \
-                          Changes won't applied.", err)
-            )
-            .and_then(|new_config| Ok(new_config))
+            .map_err(|err| {
+                error!(
+                    "Error during reading file: {}. \
+                     Changes won't applied.",
+                    err
+                )
+            }).and_then(|new_config| Ok(new_config))
             .is_ok();
     }
 
     conf
 }
 
-
 #[cfg(test)]
 mod tests {
-    use super::{get_config};
+    use super::get_config;
 
     #[test]
     fn test_get_config_returns_a_new_config_by_default() {

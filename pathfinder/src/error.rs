@@ -1,4 +1,4 @@
-//! Error handlers for an application
+//! Error handlers for Pathfinder application
 //!
 //! This module is intended for simplifying error handling and propagating
 //! them in an existing application, easy to use and quite extendable in
@@ -7,20 +7,20 @@
 
 extern crate config;
 
-use std::io;
 use std::error;
 use std::fmt;
+use std::io;
 use std::result;
 
-use self::config::{ConfigError};
+use json::JsonValue;
 
+use self::config::ConfigError;
 
 /// Type alias for `Result` objects that return a Pathfinder error.
 pub type Result<T> = result::Result<T, PathfinderError>;
 
-
 /// An enum of all possible errors which could occur during the work of reverse proxy.
-#[derive(Debug)]
+#[derive(Debug, AsStaticStr)]
 pub enum PathfinderError {
     /// The error that occurred during work with I/O.
     Io(io::Error),
@@ -39,9 +39,10 @@ pub enum PathfinderError {
     /// The error that occurred when token isn't specified or invalid.
     AuthenticationError(String),
     /// The error that occurred with a message broker.
-    MessageBrokerError(String)
+    MessageBrokerError(String),
+    /// The error that occurred when returned an error from a microservice.
+    MicroserviceError(JsonValue)
 }
-
 
 impl fmt::Display for PathfinderError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -53,20 +54,12 @@ impl fmt::Display for PathfinderError {
             PathfinderError::DecodingError(ref msg) => write!(f, "Decoding error: {}", msg),
             PathfinderError::AuthenticationError(ref msg) => write!(f, "Authentication error: {}", msg),
             PathfinderError::MessageBrokerError(ref msg) => write!(f, "{}", msg),
+            PathfinderError::MicroserviceError(ref json) => write!(f, "{:?}", json),
         }
     }
 }
 
-
 impl error::Error for PathfinderError {
-    fn description(&self) -> &str {
-        match *self {
-            PathfinderError::Io(ref err) => err.description(),
-            PathfinderError::SettingsError(ref err) => err.description(),
-            _ => "configuration error",
-        }
-    }
-
     fn cause(&self) -> Option<&error::Error> {
         match *self {
             PathfinderError::Io(ref err) => Some(err),
@@ -76,13 +69,11 @@ impl error::Error for PathfinderError {
     }
 }
 
-
 impl From<io::Error> for PathfinderError {
     fn from(err: io::Error) -> PathfinderError {
         PathfinderError::Io(err)
     }
 }
-
 
 impl From<config::ConfigError> for PathfinderError {
     fn from(err: config::ConfigError) -> PathfinderError {
