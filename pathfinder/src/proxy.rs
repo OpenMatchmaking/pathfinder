@@ -48,7 +48,7 @@ impl Proxy {
         }
     }
 
-    /// Run the server on the specified address and port.
+    /// Run the server on the specified address and the port.
     pub fn run(&self, address: SocketAddr) {
         let listener = TcpListener::bind(&address).unwrap();
         info!("Listening on: {}", address);
@@ -77,10 +77,7 @@ impl Proxy {
                         // send us messages. It could be used for broadcasting your data to
                         // another users in the future.
                         let (tx, rx) = mpsc::unbounded();
-                        connection_for_insert
-                            .lock()
-                            .unwrap()
-                            .insert(addr, Arc::new(tx));
+                        connection_for_insert.lock().unwrap().insert(addr, Arc::new(tx));
 
                         // Split the WebSocket stream so that it will be possible to work
                         // with the reading and writing halves separately.

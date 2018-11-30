@@ -6,7 +6,8 @@ pub mod empty;
 pub mod jwt;
 pub mod utils;
 
-// For more details about resources look into the Open Matchmaking documentation on GitHub.
+// For more details about used exchanges and routing keys look in the
+// Open Matchmaking documentation on GitHub.
 pub const TOKEN_VERIFY_ROUTING_KEY: &'static str = "auth.token.verify";
 pub const TOKEN_VERIFY_EXCHANGE: &'static str = "open-matchmaking.auth.token.verify.direct";
 pub const TOKEN_USER_PROFILE_ROUTING_KEY: &'static str = "auth.users.retrieve";

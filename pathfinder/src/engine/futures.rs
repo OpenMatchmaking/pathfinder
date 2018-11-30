@@ -165,6 +165,7 @@ pub fn rpc_request_future(
         .and_then(move |channel| {
             channel.close(200, "Close the channel.")
         })
+        // 10. Returns the result to the caller as future
         .then(move |result| match result {
             Ok(_) => Ok(()),
             Err(err) => {

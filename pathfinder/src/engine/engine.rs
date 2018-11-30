@@ -55,6 +55,9 @@ impl Engine {
         }
     }
 
+    /// Performs deserializing an incoming message into JSON, searching for
+    /// a route, applying a middleware and sending a request to microservice
+    /// in the certain format.
     pub fn process_request(
         &self,
         message: Message,

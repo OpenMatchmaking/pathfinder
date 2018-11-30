@@ -40,6 +40,8 @@ impl JwtTokenMiddleware {
         JwtTokenMiddleware {}
     }
 
+    /// Performs a request to Auth/Auth microservice with the taken token
+    /// that must be verified before doing any actions later.
     fn verify_token(&self, message: JsonMessage, token: String, rabbitmq_client: Arc<RabbitMQClient>)
         -> impl Future<Item=(), Error=PathfinderError> + Sync + Send + 'static
     {
@@ -180,6 +182,7 @@ impl JwtTokenMiddleware {
         .and_then(move |(channel, json)| {
             channel.close(200, "Close the channel.").map(|_| json)
         })
+        // 10. Prepare the response for the client.
         .then(move |result| match result {
             Ok(json) => {
                 let has_errors = !json["error"].is_null();
@@ -206,6 +209,8 @@ impl JwtTokenMiddleware {
         })
     }
 
+    /// Performs a request to Auth/Auth microservice with the taken token
+    /// that will be used for getting a list of permissions to other resources.
     fn get_headers(&self, message: JsonMessage, token: String, rabbitmq_client: Arc<RabbitMQClient>)
         -> impl Future<Item=CustomUserHeaders, Error=PathfinderError> + Sync + Send + 'static
     {
@@ -346,6 +351,7 @@ impl JwtTokenMiddleware {
         .and_then(move |(channel, json)| {
             channel.close(200, "Close the channel.").map(|_| json)
         })
+        // 10. Prepare the response for the client.
         .then(move |result| match result {
             Ok(json) => {
                 let has_errors = !json["error"].is_null();

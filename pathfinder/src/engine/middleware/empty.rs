@@ -11,8 +11,8 @@ use engine::middleware::base::{Middleware, MiddlewareFuture};
 use engine::serializer::JsonMessage;
 use rabbitmq::RabbitMQClient;
 
-/// Default struct which is used for reverse proxy without an authentication
-/// layer.
+/// A middleware that used for reverse proxy for cases when
+/// not necessary to do validating tokens or permissions.
 pub struct EmptyMiddleware;
 
 impl EmptyMiddleware {

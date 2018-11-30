@@ -1,4 +1,4 @@
-//! Error handlers for an application
+//! Error handlers for Pathfinder application
 //!
 //! This module is intended for simplifying error handling and propagating
 //! them in an existing application, easy to use and quite extendable in
