@@ -108,9 +108,10 @@ impl Serializer {
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::json::Null;
-    use super::super::super::tungstenite::Message;
-    use super::Serializer;
+    use json::{Null, object};
+    use tungstenite::Message;
+
+    use crate::engine::serializer::Serializer;
 
     #[test]
     fn test_serialize_returns_a_new_message_instance() {

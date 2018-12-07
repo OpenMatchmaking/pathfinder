@@ -28,10 +28,12 @@ pub fn deserialize_message(message: &Message) -> Result<JsonMessage> {
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::json::parse as json_parse;
-    use super::super::super::tungstenite::Message;
-    use super::{deserialize_message, serialize_message, wrap_a_string_error};
     use std::sync::Arc;
+
+    use json::{object, parse as json_parse};
+    use tungstenite::Message;
+
+    use crate::engine::utils::{deserialize_message, serialize_message, wrap_a_string_error};
 
     #[test]
     fn test_wrap_an_string_error_returns_json_with_details_field() {

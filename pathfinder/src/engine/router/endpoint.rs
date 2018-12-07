@@ -156,8 +156,8 @@ pub fn extract_endpoints(conf: Box<Config>) -> HashMap<String, ReadOnlyEndpoint>
 
 #[cfg(test)]
 mod tests {
-    use config::get_config;
-    use engine::router::endpoint::{extract_endpoints, Endpoint};
+    use crate::config::get_config;
+    use crate::engine::router::endpoint::{extract_endpoints, Endpoint};
 
     #[test]
     fn test_extract_endpoints_returns_an_empty_dict_by_default() {

@@ -72,8 +72,8 @@ impl Router {
 
 #[cfg(test)]
 mod tests {
-    use config::get_config;
-    use engine::router::{extract_endpoints, Router};
+    use crate::config::get_config;
+    use crate::engine::router::{extract_endpoints, Router};
 
     fn get_router(file_path: &str) -> Box<Router> {
         let config = get_config(file_path);
