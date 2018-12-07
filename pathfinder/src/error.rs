@@ -5,16 +5,14 @@
 //! the future.
 //!
 
-extern crate config;
-
 use std::error;
 use std::fmt;
 use std::io;
 use std::result;
 
+use config::ConfigError;
 use json::JsonValue;
-
-use self::config::ConfigError;
+use strum_macros::AsStaticStr;
 
 /// Type alias for `Result` objects that return a Pathfinder error.
 pub type Result<T> = result::Result<T, PathfinderError>;

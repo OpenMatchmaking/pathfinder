@@ -2,8 +2,10 @@
 ///
 use tungstenite::protocol::Message;
 
-use super::super::error::Result;
-use super::serializer::{JsonMessage, Serializer};
+use json::object;
+
+use crate::error::Result;
+use crate::engine::serializer::{JsonMessage, Serializer};
 
 /// Transforms an error (which is a string) into JSON object in the special format.
 pub fn wrap_a_string_error(error_type: &str, err: &str) -> Message {

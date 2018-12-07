@@ -1,4 +1,4 @@
-//! Authentication / authorization layer
+//! This modules contains constants and type aliases for midddlewares.
 //!
 
 pub mod base;

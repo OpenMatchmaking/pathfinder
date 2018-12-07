@@ -6,9 +6,9 @@ use std::sync::Arc;
 
 use futures::Future;
 
-use engine::serializer::JsonMessage;
-use error::PathfinderError;
-use rabbitmq::RabbitMQClient;
+use crate::engine::serializer::JsonMessage;
+use crate::error::PathfinderError;
+use crate::rabbitmq::RabbitMQClient;
 
 /// Type alias for dictionary with custom user headers
 pub type CustomUserHeaders = HashMap<String, String>;

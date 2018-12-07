@@ -1,9 +1,8 @@
 //! Wrappers for handling an application configuration
 //!
 
-extern crate config;
-
-use self::config::{Config, File};
+use log::error;
+use config::{Config, File};
 
 /// Returns a configuration for the application with data that was
 /// read from a file. When specified an empty string, returns a

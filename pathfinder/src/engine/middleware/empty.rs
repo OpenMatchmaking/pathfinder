@@ -7,9 +7,9 @@ use std::sync::Arc;
 
 use futures::future::lazy;
 
-use engine::middleware::base::{Middleware, MiddlewareFuture};
-use engine::serializer::JsonMessage;
-use rabbitmq::RabbitMQClient;
+use crate::engine::middleware::base::{Middleware, MiddlewareFuture};
+use crate::engine::serializer::JsonMessage;
+use crate::rabbitmq::RabbitMQClient;
 
 /// A middleware that used for reverse proxy for cases when
 /// not necessary to do validating tokens or permissions.

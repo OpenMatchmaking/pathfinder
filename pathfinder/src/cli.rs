@@ -3,7 +3,8 @@
 //! For more details about using the structopt crate you can find [here](https://github.com/TeXitoi/structopt).
 //!
 
-extern crate clap;
+use clap;
+use structopt::StructOpt;
 
 /// A structure that defines available arguments and options for CLI
 #[derive(StructOpt, Debug)]

@@ -7,10 +7,10 @@
 
 use std::sync::Arc;
 
-use error::{PathfinderError, Result};
-
 use json::{parse as parse_json, JsonValue};
 use tungstenite::protocol::Message;
+
+use crate::error::{PathfinderError, Result};
 
 /// Type alias for JSON object
 pub type JsonMessage = Arc<Box<JsonValue>>;

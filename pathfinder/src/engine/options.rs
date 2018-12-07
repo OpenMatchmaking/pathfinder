@@ -3,9 +3,8 @@
 
 use std::sync::Arc;
 
-use super::router::ReadOnlyEndpoint;
-use super::serializer::JsonMessage;
-
+use crate::engine::router::ReadOnlyEndpoint;
+use crate::engine::serializer::JsonMessage;
 
 /// Simple wrapper for options that will be passed to futures.
 #[derive(Clone, Debug)]

@@ -7,8 +7,8 @@
 use std::clone::Clone;
 use std::collections::HashMap;
 
-use super::endpoint::ReadOnlyEndpoint;
-use error::{PathfinderError, Result};
+use crate::engine::router::endpoint::ReadOnlyEndpoint;
+use crate::error::{PathfinderError, Result};
 
 /// A struct which is stores a mapping of resources that can be
 /// represented in requests and transformed into certain API endpoints of
