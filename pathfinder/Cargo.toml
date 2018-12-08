@@ -6,6 +6,7 @@ repository = "https://github.com/OpenMatchmaking/pathfinder"
 readme = "../README.md"
 keywords = ["websocket", "rabbitmq", "proxy", "reverse-proxy", "open-matchmaking"]
 license = "BSD-3-Clause"
+edition = "2018"
 
 [dependencies]
 amq-protocol = "0.23.0"

@@ -9,10 +9,11 @@ use futures::future::Future;
 use futures::IntoFuture;
 use lapin_futures_rustls::lapin::channel::{Channel, ConfirmSelectOptions};
 use lapin_futures_rustls::lapin::client::{Client, ConnectionOptions};
+use log::error;
 use tokio::executor::spawn;
 use tokio_tcp::TcpStream;
 
-use super::utils::get_address_to_rabbitmq;
+use crate::rabbitmq::utils::get_address_to_rabbitmq;
 
 /// Alias for the lapin client with TLS.
 pub type LapinClient = Client<TcpStream>;

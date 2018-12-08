@@ -14,19 +14,20 @@ use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 
 use amq_protocol::uri::AMQPUri;
-use cli::CliOptions;
 use futures::stream::Stream;
 use futures::sync::mpsc;
 use futures::{Future, Sink};
+use log::{debug, info, error};
 use strum::AsStaticRef;
 use tokio::net::TcpListener;
 use tokio_tungstenite::accept_async;
 use tungstenite::protocol::Message;
 
-use engine::{Engine, MessageSender, serialize_message, wrap_a_string_error};
-use error::PathfinderError;
-use rabbitmq::client::RabbitMQClient;
-use rabbitmq::utils::get_uri;
+use crate::cli::CliOptions;
+use crate::engine::{Engine, MessageSender, serialize_message, wrap_a_string_error};
+use crate::error::PathfinderError;
+use crate::rabbitmq::client::RabbitMQClient;
+use crate::rabbitmq::utils::get_uri;
 
 /// A reverse proxy application.
 pub struct Proxy {

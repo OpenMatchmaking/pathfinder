@@ -12,20 +12,20 @@ use futures::future::{lazy, Future};
 use tungstenite::Message;
 use uuid::Uuid;
 
-use super::super::cli::CliOptions;
-use super::super::config::get_config;
-use super::super::error::{Result, PathfinderError};
-use super::super::rabbitmq::RabbitMQClient;
-use engine::middleware::{
+use crate::cli::CliOptions;
+use crate::config::get_config;
+use crate::error::{Result, PathfinderError};
+use crate::rabbitmq::RabbitMQClient;
+use super::middleware::{
     CustomUserHeaders, EmptyMiddleware, JwtTokenMiddleware, Middleware,
     MiddlewareFuture
 };
-use engine::MessageSender;
-use engine::futures::rpc_request_future;
-use engine::router::{extract_endpoints, ReadOnlyEndpoint, Router};
-use engine::options::RpcOptions;
-use engine::serializer::JsonMessage;
-use engine::utils::{deserialize_message};
+use super::MessageSender;
+use super::futures::rpc_request_future;
+use super::router::{extract_endpoints, ReadOnlyEndpoint, Router};
+use super::options::RpcOptions;
+use super::serializer::JsonMessage;
+use super::utils::{deserialize_message};
 
 /// Proxy engine for processing messages, handling errors and communicating
 /// with a message broker.

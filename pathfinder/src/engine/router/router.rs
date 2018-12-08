@@ -7,8 +7,8 @@
 use std::clone::Clone;
 use std::collections::HashMap;
 
-use super::endpoint::ReadOnlyEndpoint;
-use error::{PathfinderError, Result};
+use crate::engine::router::endpoint::ReadOnlyEndpoint;
+use crate::error::{PathfinderError, Result};
 
 /// A struct which is stores a mapping of resources that can be
 /// represented in requests and transformed into certain API endpoints of
@@ -72,8 +72,8 @@ impl Router {
 
 #[cfg(test)]
 mod tests {
-    use config::get_config;
-    use engine::router::{extract_endpoints, Router};
+    use crate::config::get_config;
+    use crate::engine::router::{extract_endpoints, Router};
 
     fn get_router(file_path: &str) -> Box<Router> {
         let config = get_config(file_path);

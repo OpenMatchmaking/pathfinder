@@ -14,12 +14,13 @@ use lapin_futures_rustls::lapin::channel::{
     QueueDeclareOptions, QueueDeleteOptions, QueueUnbindOptions,
 };
 use lapin_futures_rustls::lapin::types::{AMQPValue, FieldTable};
+use log::error;
 
-use super::super::error::PathfinderError;
-use super::super::rabbitmq::RabbitMQClient;
-use engine::MessageSender;
-use engine::options::RpcOptions;
-use engine::serializer::Serializer;
+use crate::error::PathfinderError;
+use crate::rabbitmq::RabbitMQClient;
+use crate::engine::MessageSender;
+use crate::engine::options::RpcOptions;
+use crate::engine::serializer::Serializer;
 
 /// Simple future that sends a RPC request to the certain microservice,
 /// consumes from a response from a separate queue and then returns a

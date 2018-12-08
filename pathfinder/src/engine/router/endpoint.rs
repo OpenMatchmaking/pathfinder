@@ -1,15 +1,15 @@
 //! A struct that represents an endpoint and related data with it.
 //!
 
-extern crate config;
-
 use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 use std::sync::Arc;
 
-use super::super::{REQUEST_EXCHANGE, RESPONSE_EXCHANGE};
-use self::config::{Config, Value};
-use error::PathfinderError;
+use config::{Config, Value};
+use log::warn;
+
+use crate::engine::{REQUEST_EXCHANGE, RESPONSE_EXCHANGE};
+use crate::error::PathfinderError;
 
 /// Type alias for thread-safe endpoint (only for read-only access)
 pub type ReadOnlyEndpoint = Arc<Endpoint>;
@@ -156,8 +156,8 @@ pub fn extract_endpoints(conf: Box<Config>) -> HashMap<String, ReadOnlyEndpoint>
 
 #[cfg(test)]
 mod tests {
-    use config::get_config;
-    use engine::router::endpoint::{extract_endpoints, Endpoint};
+    use crate::config::get_config;
+    use crate::engine::router::endpoint::{extract_endpoints, Endpoint};
 
     #[test]
     fn test_extract_endpoints_returns_an_empty_dict_by_default() {

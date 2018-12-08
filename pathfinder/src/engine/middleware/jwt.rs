@@ -8,27 +8,28 @@ use std::vec::Vec;
 
 use futures::future::{lazy, Future};
 use futures::Stream;
-use json::parse as parse_json;
+use json::{object, parse as parse_json};
 use lapin_futures_rustls::lapin::channel::{
     BasicConsumeOptions, BasicProperties, BasicPublishOptions, QueueBindOptions,
     QueueDeclareOptions, QueueDeleteOptions, QueueUnbindOptions,
 };
 use lapin_futures_rustls::lapin::types::{AMQPValue, FieldTable};
+use log::error;
 use uuid::Uuid;
 
-use error::PathfinderError;
-use engine::{RESPONSE_EXCHANGE};
-use engine::middleware::{
+use crate::error::PathfinderError;
+use crate::engine::{RESPONSE_EXCHANGE};
+use crate::engine::middleware::{
     TOKEN_VERIFY_ROUTING_KEY,
     TOKEN_VERIFY_EXCHANGE,
     TOKEN_USER_PROFILE_ROUTING_KEY,
     TOKEN_USER_PROFILE_EXCHANGE
 };
-use engine::middleware::base::{Middleware, MiddlewareFuture, CustomUserHeaders};
-use engine::middleware::utils::get_permissions;
-use engine::options::RpcOptions;
-use engine::serializer::JsonMessage;
-use rabbitmq::RabbitMQClient;
+use crate::engine::middleware::base::{Middleware, MiddlewareFuture, CustomUserHeaders};
+use crate::engine::middleware::utils::get_permissions;
+use crate::engine::options::RpcOptions;
+use crate::engine::serializer::JsonMessage;
+use crate::rabbitmq::RabbitMQClient;
 
 /// A middleware class, that will check a JSON Web Token in WebSocket message.
 /// If token wasn't specified or it's invalid returns a `PathfinderError` object.

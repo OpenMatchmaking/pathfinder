@@ -7,10 +7,10 @@
 
 use std::sync::Arc;
 
-use error::{PathfinderError, Result};
-
 use json::{parse as parse_json, JsonValue};
 use tungstenite::protocol::Message;
+
+use crate::error::{PathfinderError, Result};
 
 /// Type alias for JSON object
 pub type JsonMessage = Arc<Box<JsonValue>>;
@@ -108,9 +108,10 @@ impl Serializer {
 
 #[cfg(test)]
 mod tests {
-    use super::super::super::json::Null;
-    use super::super::super::tungstenite::Message;
-    use super::Serializer;
+    use json::{Null, object};
+    use tungstenite::Message;
+
+    use crate::engine::serializer::Serializer;
 
     #[test]
     fn test_serialize_returns_a_new_message_instance() {

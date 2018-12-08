@@ -8,7 +8,7 @@ pub mod utils;
 
 use std::sync::Arc;
 
-use futures::sync::mpsc;
+use ::futures::sync::mpsc;
 use tungstenite::Message;
 
 /// Default AMQP exchange point for requests

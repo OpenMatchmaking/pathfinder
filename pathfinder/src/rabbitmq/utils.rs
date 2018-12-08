@@ -4,8 +4,9 @@
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, ToSocketAddrs};
 
 use amq_protocol::uri::AMQPUri;
+use log::{error, warn};
 
-use super::super::cli::CliOptions;
+use crate::cli::CliOptions;
 
 /// Generates a connection URL to RabbitMQ broker.
 pub fn get_address_to_rabbitmq(uri: &AMQPUri) -> SocketAddr {
