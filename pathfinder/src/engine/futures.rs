@@ -127,7 +127,7 @@ pub fn rpc_request_future(
             let serializer = Serializer::new();
             let response = serializer.serialize(json.dump()).unwrap();
             let transmitter_local = transmitter.clone();
-            transmitter_local.unbounded_send(response).unwrap();
+            transmitter_local.unbounded_send(response).unwrap_or(());
 
             channel
                 .basic_ack(message.delivery_tag, false)

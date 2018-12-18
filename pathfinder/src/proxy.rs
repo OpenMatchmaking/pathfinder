@@ -108,8 +108,7 @@ impl Proxy {
                                         },
                                     };
 
-                                    transmitter_for_errors.unbounded_send(response).unwrap();
-                                    ()
+                                    transmitter_for_errors.unbounded_send(response).unwrap_or(())
                                 });
 
                             tokio::spawn(process_request_future);
