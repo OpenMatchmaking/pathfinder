@@ -81,8 +81,8 @@ The repository with benchmarks can be found [here](https://github.com/OpenMatchm
 | Avg RAM usage, Mb          | 42.02         | 48.54                     |
 | Max CPU usage, %           | 114.04        | 120.398                   |
 | Avg CPU usage, %           | 69.54         | 45.66                     |
-| Total requests             | 18225         | 6723                      |
-| Successfully processed     | 18225         | 6723                      |
+| Total requests             | 6075          | 2241                      |
+| Successfully processed     | 6075          | 2241                      |
 | Error responses            | 0             | 0                         |
 | Min response time (ms)     | 3             | 15                        |
 | Max response time (ms)     | 13243         | 38945                     |
