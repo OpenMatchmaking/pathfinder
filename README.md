@@ -1,5 +1,5 @@
 # pathfinder
-An asynchronous WebSocket-over-RabbitMQ reverse proxy, based on the tokio and futures-rs crates.
+An asynchronous WebSocket-over-RabbitMQ reverse proxy, based on [Tokio](https://tokio.rs/) and [futures-rs](https://github.com/rust-lang-nursery/futures-rs) crates.
 
 # Features
 - Configuring a behaviour of the reverse proxy via CLI options and YAML files
@@ -70,7 +70,7 @@ The test were made in two passes:
 1. Relies on processing requests without validating tokens and passing the data as is to the Echo microservice.
 2. Uses an information that necessary to register and to generate a token for getting an access to microservice:
 - Communicating with Auth/Auth for registering a new user and generating JSON Web Token
-- Token from the previous step must be used with data for getting an access to the Echo microservice. During this simulation step the token will be verified by the Auth/Auth microservice before passing a requests further.
+- Token from the previous step must be used with data for getting an access to the Echo microservice. During this simulation step the token will be verified by the Auth/Auth microservice before passing a requests further
 
 The repository with benchmarks can be found [here](https://github.com/OpenMatchmaking/bench-pathfinder).
 
@@ -94,7 +94,7 @@ The repository with benchmarks can be found [here](https://github.com/OpenMatchm
 | 99th percentile (ms)       | 12968         | 38587                     |
 | Requests / sec             | 162.723       | 53.357                    |
 
-*NOTE: Keep in mind the response time and RPS (requests per seconds) are much lower on the second pass because necessary to communicate with Auth/Auth microservice a couple of times before doing an actual work.*
+*NOTE: Keep in mind the response time and RPS (requests per second) are much lower on the second pass because necessary to communicate with Auth/Auth microservice a couple of times before doing an actual work.*
 
 # License
 The pathfinder is published under BSD license. For more details read the [LICENSE](https://github.com/OpenMatchmaking/pathfinder/blob/master/LICENSE) file.
