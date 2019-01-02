@@ -9,7 +9,7 @@ license = "BSD-3-Clause"
 edition = "2018"
 
 [dependencies]
-amq-protocol = "0.23.0"
+amq-protocol = "1.0.0"
 chrono = "0.4.6"
 clap = "2.32.0"
 config = "0.9.1"
