@@ -12,6 +12,7 @@ use std::result;
 
 use config::ConfigError;
 use json::JsonValue;
+use lapin_futures::error::{Error as LapinFuturesError};
 use strum_macros::AsStaticStr;
 
 /// Type alias for `Result` objects that return a Pathfinder error.
@@ -22,6 +23,8 @@ pub type Result<T> = result::Result<T, PathfinderError>;
 pub enum PathfinderError {
     /// The error that occurred during work with I/O.
     Io(io::Error),
+    /// Represents a Lapin client error.
+    LapinError(LapinFuturesError),
     /// Represents all possible errors that can occur when working with
     /// configuration (reading, watching for a changes, etc.).
     SettingsError(ConfigError),
@@ -46,6 +49,7 @@ impl fmt::Display for PathfinderError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             PathfinderError::Io(ref err) => write!(f, "IO error: {}", err),
+            PathfinderError::LapinError(ref err) => write!(f, "Lapin error: {}", err),
             PathfinderError::SettingsError(ref err) => write!(f, "Settings error: {}", err),
             PathfinderError::InvalidEndpoint(ref msg) => write!(f, "Parse error: {}", msg),
             PathfinderError::EndpointNotFound(ref msg) => write!(f, "Endpoint \"{}\" was not found", msg),
