@@ -29,7 +29,6 @@ strum = "0.13.0"
 strum_macros = "0.13.0"
 tokio = "0.1.11"
 tokio-io = "0.1.9"
-tokio-tcp = "0.1.2"
 tokio-tungstenite = "0.6.0"
 tungstenite = "0.6.0"
 uuid = { version = "0.7.1", features = ["v4"] }
