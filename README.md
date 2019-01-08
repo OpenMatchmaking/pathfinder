@@ -84,17 +84,18 @@ The repository with benchmarks can be found [here](https://github.com/OpenMatchm
 | Total requests             | 6075          | 2241                      |
 | Successfully processed     | 6075          | 2241                      |
 | Error responses            | 0             | 0                         |
-| Min response time (ms)     | 3             | 15                        |
-| Max response time (ms)     | 13243         | 38945                     |
-| Mean response time (ms)    | 2450          | 8948                      |
-| Std dev response time (ms) | 3933          | 13833                     |
-| 50th percentile (ms)       | 17            | 25                        |
-| 75th percentile (ms)       | 4824          | 20372                     |
-| 95th percentile (ms)       | 11358         | 37672                     |
-| 99th percentile (ms)       | 12968         | 38587                     |
+| Min response time, ms      | 3             | 15                        |
+| Max response time, ms      | 13243         | 38945                     |
+| Mean response time, ms     | 2450          | 8948                      |
+| Std dev response time, ms  | 3933          | 13833                     |
+| 50th percentile, ms        | 17            | 25                        |
+| 75th percentile, ms        | 4824          | 20372                     |
+| 95th percentile, ms        | 11358         | 37672                     |
+| 99th percentile, ms        | 12968         | 38587                     |
 | Requests / sec             | 162.723       | 53.357                    |
 
-*NOTE: Keep in mind the response time and RPS (requests per second) are much lower on the second pass because necessary to communicate with Auth/Auth microservice a couple of times before doing an actual work.*
+***Note #1**: Keep in mind that the response time and RPS (requests per second) are much lower on the second pass because necessary to communicate with Auth/Auth microservice a couple of times before doing an actual work.*  
+***Note #2**: Potentially, reverse proxy could process more requests per second which is mostly depends on performance of the used microservice, rather than reverse proxy itself.*
 
 # License
 The pathfinder is published under BSD license. For more details read the [LICENSE](https://github.com/OpenMatchmaking/pathfinder/blob/master/LICENSE) file.
