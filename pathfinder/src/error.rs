@@ -11,8 +11,8 @@ use std::io;
 use std::result;
 
 use config::ConfigError;
+use failure::Error;
 use json::JsonValue;
-use lapin_futures::error::{Error as LapinFuturesError};
 use strum_macros::AsStaticStr;
 
 /// Type alias for `Result` objects that return a Pathfinder error.
@@ -24,7 +24,7 @@ pub enum PathfinderError {
     /// The error that occurred during work with I/O.
     Io(io::Error),
     /// Represents a Lapin client error.
-    LapinError(LapinFuturesError),
+    LapinError(Error),
     /// Represents all possible errors that can occur when working with
     /// configuration (reading, watching for a changes, etc.).
     SettingsError(ConfigError),

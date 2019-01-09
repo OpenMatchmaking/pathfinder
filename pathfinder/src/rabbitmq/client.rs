@@ -4,7 +4,7 @@
 use std::sync::Arc;
 
 use amq_protocol::uri::AMQPUri;
-use failure::Error;
+use failure::{err_msg, Error};
 use futures::future::Future;
 use futures::IntoFuture;
 use lapin_futures::error::{Error as LapinError};
@@ -42,10 +42,7 @@ impl RabbitMQClient {
                 spawn(heartbeat.map_err(|err| error!("Heartbeat error: {:?}", err)))
                     .into_future()
                     .map(|_| RabbitMQClient { client: Arc::new(client) })
-                    .map_err(|error| {
-                        error!("Occurred an error during spawning heartbeat future: {:?}", error);
-                        error
-                    })
+                    .map_err(|_| err_msg("Couldn't spawn the heartbeat task."))
             })
     }
 

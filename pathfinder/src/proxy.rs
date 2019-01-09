@@ -164,7 +164,7 @@ impl Proxy {
             .map(|client| Arc::new(client))
             .map_err(|error| {
                 error!("Error in RabbitMQ client. Reason: {:?}", error);
-                PathfinderError::LapinError(error)
+                PathfinderError::LapinError(error.compat().into_inner())
             })
     }
 }
