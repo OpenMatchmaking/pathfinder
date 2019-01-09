@@ -39,7 +39,7 @@ impl RabbitMQClient {
                     .map_err(Error::from)
             })
             .and_then(|(client, heartbeat)| {
-                spawn(heartbeat.map_err(|err| error!("Heartbeat error: {:?}", err)))
+                spawn(heartbeat.map_err(|err| error!("Heartbeat error: {}", err)))
                     .into_future()
                     .map(|_| RabbitMQClient { client: Arc::new(client) })
                     .map_err(|_| err_msg("Couldn't spawn the heartbeat task."))

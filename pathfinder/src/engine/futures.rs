@@ -170,7 +170,7 @@ pub fn rpc_request_future(
         .then(move |result| match result {
             Ok(_) => Ok(()),
             Err(err) => {
-                error!("Error in RabbitMQ client. Reason -> {}", err);
+                error!("Error in RabbitMQ client. Reason: {}", err);
                 let message = String::from("The request wasn't processed. Please, try once again.");
                 Err(PathfinderError::MessageBrokerError(message))
             }

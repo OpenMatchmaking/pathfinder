@@ -147,10 +147,8 @@ impl Proxy {
         // Run the server
         let server_future = self
             .get_rabbitmq_client()
-            .map_err(|error| {
-                error!("Lapin error: {:?}", error);
-                ()
-            }).and_then(|rabbitmq: Arc<RabbitMQClient>| {
+            .map_err(|error| error!("{}", error))
+            .and_then(|rabbitmq: Arc<RabbitMQClient>| {
                 server(rabbitmq)
                     .map_err(|_error| ())
             });
@@ -163,8 +161,8 @@ impl Proxy {
         RabbitMQClient::connect(amqp_uri.as_ref())
             .map(|client| Arc::new(client))
             .map_err(|error| {
-                error!("Error in RabbitMQ client. Reason: {:?}", error);
-                PathfinderError::LapinError(error.compat().into_inner())
+                let failure_error = error.compat().into_inner();
+                PathfinderError::LapinError(failure_error)
             })
     }
 }
