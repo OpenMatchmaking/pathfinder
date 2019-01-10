@@ -118,7 +118,7 @@ impl Proxy {
 
                                 tokio::spawn(process_request_future);
                                 Ok(())
-                            });
+                            })
                         };
 
                         // Write back prepared responses

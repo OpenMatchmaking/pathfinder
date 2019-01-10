@@ -165,7 +165,7 @@ impl JwtTokenMiddleware {
                 .map(move |_| (publish_channel, consume_channel, options, json))
         })
         // 7. Delete the response queue
-        .and_then(move |(publish_channel, consume_channel, options, json)| {
+        .and_then(move |(_publish_channel, consume_channel, options, json)| {
             let queue_delete_options = QueueDeleteOptions {
                 if_unused: false,
                 if_empty: false,
@@ -328,7 +328,7 @@ impl JwtTokenMiddleware {
                 .map(move |_| (publish_channel, consume_channel, options, json))
         })
         // 7. Delete the response queue
-        .and_then(move |(publish_channel, consume_channel, options, json)| {
+        .and_then(move |(_publish_channel, consume_channel, options, json)| {
             let queue_delete_options = QueueDeleteOptions {
                 if_unused: false,
                 if_empty: false,

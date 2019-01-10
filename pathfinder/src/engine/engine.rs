@@ -120,8 +120,7 @@ impl Engine {
         rabbitmq_context: Arc<RabbitMQContext>
     ) -> MiddlewareFuture {
         let middleware = self.get_middleware_by_endpoint(endpoint);
-        let rabbitmq_client_local = rabbitmq_context.clone();
-        middleware.process_request(json_message, rabbitmq_context)
+        middleware.process_request(json_message, rabbitmq_context.clone())
     }
 
     /// Returns a middleware that matches to the passed endpoint
