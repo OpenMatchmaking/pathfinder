@@ -32,8 +32,8 @@ pub fn rpc_request_future(
     headers: HashMap<String, String>
 ) -> Box<Future<Item=(), Error=PathfinderError> + Send + Sync + 'static> {
     let rabbitmq_context_local = rabbitmq_context.clone();
-    let publish_channel = rabbitmq_context_local.publish_channel.clone();
-    let consume_channel = rabbitmq_context_local.consume_channel.clone();
+    let publish_channel = rabbitmq_context_local.get_publish_channel();
+    let consume_channel = rabbitmq_context_local.get_consume_channel();
 
     let queue_name = options.get_queue_name().unwrap().clone();
     let queue_declare_options = QueueDeclareOptions {

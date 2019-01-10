@@ -35,6 +35,14 @@ impl RabbitMQContext {
             consume_channel
         }
     }
+
+    pub fn get_publish_channel(&self) -> LapinChannel {
+        self.publish_channel.clone()
+    }
+
+    pub fn get_consume_channel(&self) -> LapinChannel {
+        self.consume_channel.clone()
+    }
 }
 
 /// A future-based asynchronous RabbitMQ client.
