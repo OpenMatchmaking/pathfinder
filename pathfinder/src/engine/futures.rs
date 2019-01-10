@@ -17,7 +17,7 @@ use lapin_futures_rustls::lapin::types::{AMQPValue, FieldTable};
 use log::error;
 
 use crate::error::PathfinderError;
-use crate::rabbitmq::RabbitMQClient;
+use crate::rabbitmq::{RabbitMQContext};
 use crate::engine::MessageSender;
 use crate::engine::options::RpcOptions;
 use crate::engine::serializer::Serializer;
@@ -27,37 +27,35 @@ use crate::engine::serializer::Serializer;
 /// response to the caller via transmitter.
 pub fn rpc_request_future(
     transmitter: MessageSender,
-    rabbitmq_client: Arc<RabbitMQClient>,
+    rabbitmq_context: Arc<RabbitMQContext>,
     options: Arc<RpcOptions>,
     headers: HashMap<String, String>
 ) -> Box<Future<Item=(), Error=PathfinderError> + Send + Sync + 'static> {
-    let rabbitmq_client_local = rabbitmq_client.clone();
+    let rabbitmq_context_local = rabbitmq_context.clone();
+    let publish_channel = rabbitmq_context_local.publish_channel.clone();
+    let consume_channel = rabbitmq_context_local.consume_channel.clone();
+
+    let queue_name = options.get_queue_name().unwrap().clone();
+    let queue_declare_options = QueueDeclareOptions {
+        passive: false,
+        durable: true,
+        exclusive: true,
+        auto_delete: false,
+        ..Default::default()
+    };
 
     Box::new(
-        // 1. Create a channel
-        rabbitmq_client_local.get_channel()
-        // 2. Declare a response queue
-        .and_then(move |channel| {
-            let queue_name = options.get_queue_name().unwrap().clone();
-            let queue_declare_options = QueueDeclareOptions {
-                passive: false,
-                durable: true,
-                exclusive: true,
-                auto_delete: false,
-                ..Default::default()
-            };
-
-            channel
-                .queue_declare(&queue_name, queue_declare_options, FieldTable::new())
-                .map(move |queue| (channel, queue, options))
-        })
-        // 3. Link the response queue the exchange
-        .and_then(move |(channel, queue, options)| {
+        // 1. Declare a response queue
+        consume_channel
+            .queue_declare(&queue_name, queue_declare_options, FieldTable::new())
+            .map(move |queue| (publish_channel, consume_channel, queue, options))
+        // 2. Link the response queue the exchange
+        .and_then(move |(publish_channel, consume_channel, queue, options)| {
             let queue_name = options.get_queue_name().unwrap().clone();
             let endpoint = options.get_endpoint().unwrap().clone();
             let routing_key = options.get_queue_name().unwrap().clone();
 
-            channel
+            consume_channel
                 .queue_bind(
                     &queue_name,
                     &endpoint.get_response_exchange(),
@@ -65,10 +63,10 @@ pub fn rpc_request_future(
                     QueueBindOptions::default(),
                     FieldTable::new()
                 )
-                .map(move |_| (channel, queue, options))
+                .map(move |_| (publish_channel, consume_channel, queue, options))
         })
-        // 4. Publish message into the microservice queue and make ensure that it's delivered
-        .and_then(move |(channel, queue, options)| {
+        // 3. Publish message into the microservice queue and make ensure that it's delivered
+        .and_then(move |(publish_channel, consume_channel, queue, options)| {
             let publish_message_options = BasicPublishOptions {
                 mandatory: true,
                 immediate: false,
@@ -93,7 +91,7 @@ pub fn rpc_request_future(
                 .with_reply_to(queue_name_response.to_string())       // Response queue
                 .with_correlation_id(event_name.clone().to_string()); // Event name
 
-            channel
+            publish_channel
                 .basic_publish(
                     &endpoint.get_request_exchange(),
                     &endpoint.get_routing_key(),
@@ -101,11 +99,11 @@ pub fn rpc_request_future(
                     publish_message_options,
                     basic_properties
                 )
-                .map(move |_confirmation| (channel, queue, options))
+                .map(move |_confirmation| (publish_channel, consume_channel, queue, options))
         })
-        // 5. Consume a response message from the queue, that was declared on the 2nd step
-        .and_then(move |(channel, queue, options)| {
-            channel
+        // 4. Consume a response message from the queue, that was declared on the 1st step
+        .and_then(move |(publish_channel, consume_channel, queue, options)| {
+            consume_channel
                 .basic_consume(
                     &queue,
                     "response_consumer",
@@ -117,11 +115,11 @@ pub fn rpc_request_future(
                         .take(1)
                         .into_future()
                         .map_err(|(err, _)| err)
-                        .map(move |(message, _)| (channel, queue, message.unwrap(), options))
+                        .map(move |(message, _)| (publish_channel, consume_channel, queue, message.unwrap(), options))
                 })
         })
-        // 6. Prepare a response for a client, serialize and sent via WebSocket transmitter
-        .and_then(move |(channel, queue, message, options)| {
+        // 5. Prepare a response for a client, serialize and sent via WebSocket transmitter
+        .and_then(move |(publish_channel, consume_channel, queue, message, options)| {
             let raw_data = from_utf8(&message.data).unwrap();
             let json = Arc::new(Box::new(json_parse(raw_data).unwrap()));
             let serializer = Serializer::new();
@@ -129,17 +127,17 @@ pub fn rpc_request_future(
             let transmitter_local = transmitter.clone();
             transmitter_local.unbounded_send(response).unwrap_or(());
 
-            channel
+            consume_channel
                 .basic_ack(message.delivery_tag, false)
-                .map(move |_confirmation| (channel, queue, options))
+                .map(move |_confirmation| (publish_channel, consume_channel, queue, options))
         })
-        // 7. Unbind the response queue from the exchange point
-        .and_then(move |(channel, _queue, options)| {
+        // 6. Unbind the response queue from the exchange point
+        .and_then(move |(publish_channel, consume_channel, _queue, options)| {
             let queue_name = options.get_queue_name().unwrap().clone();
             let routing_key = options.get_queue_name().unwrap().clone();
             let endpoint = options.get_endpoint().unwrap().clone();
 
-            channel
+            consume_channel
                 .queue_unbind(
                     &queue_name,
                     &endpoint.get_response_exchange(),
@@ -147,10 +145,10 @@ pub fn rpc_request_future(
                     QueueUnbindOptions::default(),
                     FieldTable::new(),
                 )
-                .map(move |_| (channel, options))
+                .map(move |_| (publish_channel, consume_channel, options))
         })
-        // 8. Delete the response queue
-        .and_then(move |(channel, options)| {
+        // 7. Delete the response queue
+        .and_then(move |(publish_channel, consume_channel, options)| {
             let queue_delete_options = QueueDeleteOptions {
                 if_unused: false,
                 if_empty: false,
@@ -158,15 +156,11 @@ pub fn rpc_request_future(
             };
             let queue_name = options.get_queue_name().unwrap().clone();
 
-            channel
+            consume_channel
                 .queue_delete(&queue_name, queue_delete_options)
-                .map(move |_| channel)
+                .map(move |_| ())
         })
-        // 9. Close the channel
-        .and_then(move |channel| {
-            channel.close(200, "Close the channel.")
-        })
-        // 10. Returns the result to the caller as future
+        // 8. Returns the result to the caller as future
         .then(move |result| match result {
             Ok(_) => Ok(()),
             Err(err) => {
