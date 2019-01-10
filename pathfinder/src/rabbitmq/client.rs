@@ -21,6 +21,22 @@ pub type LapinClient = Client<TcpStream>;
 /// Alias for the lapin channel.
 pub type LapinChannel = Channel<TcpStream>;
 
+/// Custom client context, stores data, channels and everything else
+/// that can be used for communicating with AMQP.
+pub struct RabbitMQContext {
+    publish_channel: LapinChannel,
+    consume_channel: LapinChannel
+}
+
+impl RabbitMQContext {
+    pub fn new(publish_channel: LapinChannel, consume_channel: LapinChannel) -> RabbitMQContext {
+        RabbitMQContext {
+            publish_channel,
+            consume_channel
+        }
+    }
+}
+
 /// A future-based asynchronous RabbitMQ client.
 pub struct RabbitMQClient {
     client: Arc<LapinClient>
@@ -46,9 +62,22 @@ impl RabbitMQClient {
             })
     }
 
-    /// Returns a lapin channel as future, based on the lapin client instance.
-    pub fn get_channel(&self) -> impl Future<Item=LapinChannel, Error=LapinError> + Sync + Send + 'static {
-        let client = self.client.clone();
-        client.create_confirm_channel(ConfirmSelectOptions::default())
+    /// Returns client context as future, based on the lapin client instance.
+    pub fn get_context(&self) -> impl Future<Item=RabbitMQContext, Error=LapinError> + Sync + Send + 'static {
+        let client_for_publish = self.client.clone();
+        let client_for_consume = self.client.clone();
+
+        // Request channel for publishing messages
+        client_for_publish.create_confirm_channel(ConfirmSelectOptions::default())
+            .map(|publish_channel|
+                // Request channel for consuming messages
+                client_for_consume.create_confirm_channel(ConfirmSelectOptions::default())
+                    .map(|consume_channel| (publish_channel, consume_channel))
+            )
+            .flatten()
+            // Initialize the client context
+            .map(|(publish_channel, consume_channel)| 
+                RabbitMQContext::new(publish_channel, consume_channel)
+            )
     }
 }
