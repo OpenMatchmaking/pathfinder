@@ -29,7 +29,7 @@ use crate::engine::middleware::base::{Middleware, MiddlewareFuture, CustomUserHe
 use crate::engine::middleware::utils::get_permissions;
 use crate::engine::options::RpcOptions;
 use crate::engine::serializer::JsonMessage;
-use crate::rabbitmq::RabbitMQClient;
+use crate::rabbitmq::RabbitMQContext;
 
 /// A middleware class, that will check a JSON Web Token in WebSocket message.
 /// If token wasn't specified or it's invalid returns a `PathfinderError` object.
@@ -43,18 +43,18 @@ impl JwtTokenMiddleware {
 
     /// Performs a request to Auth/Auth microservice with the taken token
     /// that must be verified before doing any actions later.
-    fn verify_token(&self, message: JsonMessage, token: String, rabbitmq_client: Arc<RabbitMQClient>)
+    fn verify_token(&self, message: JsonMessage, token: String, rabbitmq_context: Arc<RabbitMQContext>)
         -> impl Future<Item=(), Error=PathfinderError> + Sync + Send + 'static
     {
         let access_token = token.clone();
-        let rabbitmq_client_local = rabbitmq_client.clone();
+        let rabbitmq_context_local = rabbitmq_context.clone();
         let options = Arc::new(RpcOptions::default()
             .with_message(message.clone())
             .with_queue_name(Arc::new(format!("{}", Uuid::new_v4())))
         );
 
         // 1. Create a channel
-        rabbitmq_client_local.get_channel()
+        rabbitmq_context_local.get_channel()
         // 2. Declare a response queue
         .and_then(move |channel| {
             let queue_name = options.get_queue_name().unwrap().clone();
@@ -212,18 +212,18 @@ impl JwtTokenMiddleware {
 
     /// Performs a request to Auth/Auth microservice with the taken token
     /// that will be used for getting a list of permissions to other resources.
-    fn get_headers(&self, message: JsonMessage, token: String, rabbitmq_client: Arc<RabbitMQClient>)
+    fn get_headers(&self, message: JsonMessage, token: String, rabbitmq_context: Arc<RabbitMQContext>)
         -> impl Future<Item=CustomUserHeaders, Error=PathfinderError> + Sync + Send + 'static
     {
         let access_token = token.clone();
-        let rabbitmq_client_local = rabbitmq_client.clone();
+        let rabbitmq_context_local = rabbitmq_context.clone();
         let options = Arc::new(RpcOptions::default()
             .with_message(message.clone())
             .with_queue_name(Arc::new(format!("{}", Uuid::new_v4())))
         );
 
         // 1. Create a channel
-        rabbitmq_client_local.get_channel()
+        rabbitmq_context_local.get_channel()
         // 2. Declare a response queue
         .and_then(move |channel| {
             let queue_name = options.get_queue_name().unwrap().clone();
@@ -381,7 +381,7 @@ impl JwtTokenMiddleware {
 }
 
 impl Middleware for JwtTokenMiddleware {
-    fn process_request(&self, message: JsonMessage, rabbitmq_client: Arc<RabbitMQClient>) -> MiddlewareFuture {
+    fn process_request(&self, message: JsonMessage, rabbitmq_context: Arc<RabbitMQContext>) -> MiddlewareFuture {
         // Extract a token from a JSON object
         let token = match message["token"].as_str() {
             Some(token) => String::from(token),
@@ -394,8 +394,8 @@ impl Middleware for JwtTokenMiddleware {
         };
 
         // Verify the passed JSON Web Token and extract permissions
-        let verify_token_future = self.verify_token(message.clone(),token.clone(), rabbitmq_client.clone());
-        let get_headers_future = self.get_headers(message.clone(),token.clone(), rabbitmq_client.clone());
+        let verify_token_future = self.verify_token(message.clone(),token.clone(), rabbitmq_context.clone());
+        let get_headers_future = self.get_headers(message.clone(),token.clone(), rabbitmq_context.clone());
         Box::new(verify_token_future.and_then(move |_| get_headers_future))
     }
 }

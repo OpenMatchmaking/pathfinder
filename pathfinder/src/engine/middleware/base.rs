@@ -8,7 +8,7 @@ use futures::Future;
 
 use crate::engine::serializer::JsonMessage;
 use crate::error::PathfinderError;
-use crate::rabbitmq::RabbitMQClient;
+use crate::rabbitmq::RabbitMQContext;
 
 /// Type alias for dictionary with custom user headers
 pub type CustomUserHeaders = HashMap<String, String>;
@@ -21,5 +21,5 @@ pub type MiddlewareFuture = Box<Future<Item=CustomUserHeaders, Error=PathfinderE
 pub trait Middleware: Send + Sync {
     /// Applied transforms and checks to an incoming request. If it failed,
     /// then should return a `PathfinderError` instance.
-    fn process_request(&self, message: JsonMessage, rabbitmq_client: Arc<RabbitMQClient>) -> MiddlewareFuture;
+    fn process_request(&self, message: JsonMessage, rabbitmq_context: Arc<RabbitMQContext>) -> MiddlewareFuture;
 }

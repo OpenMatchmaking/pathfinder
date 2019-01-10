@@ -9,7 +9,7 @@ use futures::future::lazy;
 
 use crate::engine::middleware::base::{Middleware, MiddlewareFuture};
 use crate::engine::serializer::JsonMessage;
-use crate::rabbitmq::RabbitMQClient;
+use crate::rabbitmq::RabbitMQContext;
 
 /// A middleware that used for reverse proxy for cases when
 /// not necessary to do validating tokens or permissions.
@@ -23,7 +23,7 @@ impl EmptyMiddleware {
 
 impl Middleware for EmptyMiddleware {
     /// Returns an empty future which is doesn't doing anything.
-    fn process_request(&self, _message: JsonMessage, _rabbitmq_client: Arc<RabbitMQClient>) -> MiddlewareFuture {
+    fn process_request(&self, _message: JsonMessage, _rabbitmq_context: Arc<RabbitMQContext>) -> MiddlewareFuture {
         Box::new(lazy(move || Ok(HashMap::new())))
     }
 }
