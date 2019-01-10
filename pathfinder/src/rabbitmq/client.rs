@@ -72,14 +72,14 @@ impl RabbitMQClient {
 
     /// Returns client context as future, based on the lapin client instance.
     pub fn get_context(&self) -> impl Future<Item=RabbitMQContext, Error=LapinError> + Sync + Send + 'static {
-        let client_for_publish = self.client.clone();
-        let client_for_consume = self.client.clone();
+        let client = self.client.clone();
 
         // Request channel for publishing messages
-        client_for_publish.create_confirm_channel(ConfirmSelectOptions::default())
-            .map(|publish_channel|
+        client.create_confirm_channel(ConfirmSelectOptions::default())
+            .map(|publish_channel| (client, publish_channel))
+            .map(|(client, publish_channel)|
                 // Request channel for consuming messages
-                client_for_consume.create_confirm_channel(ConfirmSelectOptions::default())
+                client.create_confirm_channel(ConfirmSelectOptions::default())
                     .map(|consume_channel| (publish_channel, consume_channel))
             )
             .flatten()
