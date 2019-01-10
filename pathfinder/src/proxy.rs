@@ -89,7 +89,7 @@ impl Proxy {
                         let (sink, stream) = ws_stream.split();
 
                         // Read and process each message
-                        let ws_reader = |rabbitmq_context: Arc<RabbitMQContext>| {
+                        let ws_reader = move |rabbitmq_context: Arc<RabbitMQContext>| {
                             stream.for_each(move |message: Message| {
                                 // Get references to required components
                                 let addr_nested = addr.clone();
