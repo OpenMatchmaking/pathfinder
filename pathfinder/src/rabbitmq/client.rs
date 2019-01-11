@@ -43,6 +43,14 @@ impl RabbitMQContext {
     pub fn get_consume_channel(&self) -> LapinChannel {
         self.consume_channel.clone()
     }
+
+    pub fn close_channels(&self) -> impl Future<Item=(), Error=LapinError> + Sync + Send + 'static {
+        let publish_channel = self.publish_channel.clone();
+        let consume_channel = self.consume_channel.clone();
+
+        publish_channel.close(200, "Close the publish channel.")
+            .and_then(move |_| consume_channel.close(200, "Close the consume channel."))
+    }
 }
 
 /// A future-based asynchronous RabbitMQ client.
@@ -71,7 +79,7 @@ impl RabbitMQClient {
     }
 
     /// Returns client context as future, based on the lapin client instance.
-    pub fn get_context(&self) -> impl Future<Item=RabbitMQContext, Error=LapinError> + Sync + Send + 'static {
+    pub fn get_context(&self) -> impl Future<Item=Arc<RabbitMQContext>, Error=LapinError> + Sync + Send + 'static {
         let client = self.client.clone();
 
         // Request channel for publishing messages
@@ -85,7 +93,7 @@ impl RabbitMQClient {
             .flatten()
             // Initialize the client context
             .map(|(publish_channel, consume_channel)| 
-                RabbitMQContext::new(publish_channel, consume_channel)
+                Arc::new(RabbitMQContext::new(publish_channel, consume_channel))
             )
     }
 }

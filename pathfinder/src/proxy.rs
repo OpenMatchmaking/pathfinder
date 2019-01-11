@@ -129,21 +129,20 @@ impl Proxy {
 
                         // Wait for either half to be done to tear down the other
                         let connection = rabbitmq_context_future
-                            .map(|rabbitmq_context| {
-                                ws_reader(Arc::new(rabbitmq_context))
+                            .map(move |rabbitmq_context: Arc<RabbitMQContext>| {
+                                ws_reader(rabbitmq_context.clone())
                                     .map(|_| ())
                                     .map_err(|_| ())
                                     .select(ws_writer.map(|_| ()).map_err(|_| ()))
+                                    .then(move |_| rabbitmq_context.close_channels())
                             })
-                            .map_err(|_| ());
+                            .then(move |_| {
+                                connection_for_remove.lock().unwrap().remove(&addr);
+                                debug!("Connection {} closed.", addr);
+                                Ok(())
+                            });
 
-                        // Close the connection after using
-                        tokio::spawn(connection.then(move |_| {
-                            connection_for_remove.lock().unwrap().remove(&addr);
-                            debug!("Connection {} closed.", addr);
-                            Ok(())
-                        }));
-
+                        tokio::spawn(connection);
                         Ok(())
                     })
                     // An error occurred during the WebSocket handshake
