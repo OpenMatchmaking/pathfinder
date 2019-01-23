@@ -15,7 +15,7 @@ use uuid::Uuid;
 use crate::cli::CliOptions;
 use crate::config::get_config;
 use crate::error::{Result, PathfinderError};
-use crate::rabbitmq::RabbitMQClient;
+use crate::rabbitmq::RabbitMQContext;
 use super::middleware::{
     CustomUserHeaders, EmptyMiddleware, JwtTokenMiddleware, Middleware,
     MiddlewareFuture
@@ -62,7 +62,7 @@ impl Engine {
         &self,
         message: Message,
         transmitter: MessageSender,
-        rabbitmq_client: Arc<RabbitMQClient>
+        rabbitmq_context: Arc<RabbitMQContext>
     ) -> Box<Future<Item=(), Error=PathfinderError> + Send + Sync + 'static> {
         // 1. Deserialize message into JSON
         let json_message = match deserialize_message(&message) {
@@ -80,14 +80,14 @@ impl Engine {
         // 3. Instantiate futures that will be processing client credentials and a request
         let default_headers = self.generate_default_headers(&json_message.clone(), endpoint.clone());
         let transmitter_inner = transmitter.clone();
-        let rabbitmq_client_inner = rabbitmq_client.clone();
+        let rabbitmq_context_inner = rabbitmq_context.clone();
         let rpc_options = Arc::new(RpcOptions::default()
             .with_endpoint(endpoint.clone())
             .with_message(json_message.clone())
             .with_queue_name(Arc::new(format!("{}", Uuid::new_v4()))
         ));
 
-        let middleware_future = self.get_middleware_future(json_message.clone(), endpoint.clone(), rabbitmq_client.clone());
+        let middleware_future = self.get_middleware_future(json_message.clone(), endpoint.clone(), rabbitmq_context.clone());
         Box::new(
             middleware_future.and_then(move |custom_headers: CustomUserHeaders| {
                 let mut request_headers = default_headers.clone();
@@ -98,7 +98,7 @@ impl Engine {
                 }
                 rpc_request_future(
                     transmitter_inner.clone(),
-                    rabbitmq_client_inner.clone(),
+                    rabbitmq_context_inner.clone(),
                     rpc_options.clone(),
                     request_headers.clone()
                 )
@@ -117,11 +117,10 @@ impl Engine {
         &self,
         json_message: JsonMessage,
         endpoint: ReadOnlyEndpoint,
-        rabbitmq_client: Arc<RabbitMQClient>
+        rabbitmq_context: Arc<RabbitMQContext>
     ) -> MiddlewareFuture {
         let middleware = self.get_middleware_by_endpoint(endpoint);
-        let rabbitmq_client_local = rabbitmq_client.clone();
-        middleware.process_request(json_message, rabbitmq_client_local)
+        middleware.process_request(json_message, rabbitmq_context.clone())
     }
 
     /// Returns a middleware that matches to the passed endpoint

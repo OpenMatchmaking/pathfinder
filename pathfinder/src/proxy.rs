@@ -10,6 +10,7 @@
 //!
 
 use std::collections::HashMap;
+use std::io::{Error, ErrorKind};
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 
@@ -17,6 +18,7 @@ use amq_protocol::uri::AMQPUri;
 use futures::stream::Stream;
 use futures::sync::mpsc;
 use futures::{Future, Sink};
+use lapin_futures::error::{Error as LapinError};
 use log::{debug, info, error};
 use strum::AsStaticRef;
 use tokio::net::TcpListener;
@@ -26,7 +28,7 @@ use tungstenite::protocol::Message;
 use crate::cli::CliOptions;
 use crate::engine::{Engine, MessageSender, serialize_message, wrap_a_string_error};
 use crate::error::PathfinderError;
-use crate::rabbitmq::client::RabbitMQClient;
+use crate::rabbitmq::client::{RabbitMQContext, RabbitMQClient};
 use crate::rabbitmq::utils::get_uri;
 
 /// A reverse proxy application.
@@ -68,11 +70,27 @@ impl Proxy {
                 let connections_local = connections.clone();
 
                 accept_async(stream)
-                    // Process the messages
+                    // Processing an unexpected error during creation a new connection
+                    .map_err(|error| {
+                        let io_error = Error::new(ErrorKind::Other, error);
+                        PathfinderError::Io(io_error)
+                    })
+                    // Prepare lapin client context for further communication with RabbitMQ.
                     .and_then(move |ws_stream| {
+                        let rabbitmq_inner = rabbimq_local.clone();
+                        rabbitmq_inner
+                            .get_context()
+                            .map(move |rabbitmq_context: Arc<RabbitMQContext>| (ws_stream, rabbitmq_context))
+                            .map_err(|error: LapinError| PathfinderError::LapinChannelError(error))
+                    })
+                    // Process the messages
+                    .and_then(move |(ws_stream, rabbitmq_context)| {
+                        let connections_inner = connections_local.clone();
                         let connection_for_insert = connections_local.clone();
                         let connection_for_remove = connections_local.clone();
-                        let connections_inner = connections_local.clone();
+
+                        let rabbitmq_context_inner = rabbitmq_context.clone();
+                        let rabbitmq_context_for_clean = rabbitmq_context.clone();
 
                         // Create a channel for the stream, which other sockets will use to
                         // send us messages. It could be used for broadcasting your data to
@@ -91,10 +109,10 @@ impl Proxy {
                             let connections_nested = connections_inner.clone();
                             let transmitter_nested = connections_nested.lock().unwrap()[&addr_nested].clone();
                             let transmitter_for_errors = connections_nested.lock().unwrap()[&addr_nested].clone();
-                            let rabbitmq_nested = rabbimq_local.clone();
+                            let rabbitmq_context_nested = rabbitmq_context_inner.clone();
 
                             let process_request_future = engine_local
-                                .process_request(message, transmitter_nested, rabbitmq_nested)
+                                .process_request(message, transmitter_nested, rabbitmq_context_nested)
                                 .map_err(move |error: PathfinderError| {
                                     let response = match error {
                                         PathfinderError::MicroserviceError(json) => {
@@ -105,7 +123,7 @@ impl Proxy {
                                             let error_message = format!("{}", error);
                                             let error_type = error.as_static();
                                             wrap_a_string_error(&error_type, error_message.as_str())
-                                        },
+                                        }
                                     };
 
                                     transmitter_for_errors.unbounded_send(response).unwrap_or(())
@@ -127,16 +145,22 @@ impl Proxy {
                             .map_err(|_| ())
                             .select(ws_writer.map(|_| ()).map_err(|_| ()));
 
-                        // Close the connection after using
-                        tokio::spawn(connection.then(move |_| {
-                            connection_for_remove.lock().unwrap().remove(&addr);
-                            debug!("Connection {} closed.", addr);
-                            Ok(())
-                        }));
+                        // Then clean up RabbitMQ context and close the connection after the usage
+                        let handler = connection
+                            .then(move |_| {
+                                debug!("Clean up RabbitMQ context.");
+                                rabbitmq_context_for_clean.close_channels()
+                            })
+                            .then(move |_| {
+                                connection_for_remove.lock().unwrap().remove(&addr);
+                                debug!("Connection {} closed.", addr);
+                                Ok(())
+                            });
 
+                        tokio::spawn(handler);
                         Ok(())
                     })
-                    // An error occurred during the WebSocket handshake
+                    // An unexpected error occurred during processing or the WebSocket handshake
                     .or_else(|error| {
                         debug!("{}", error);
                         Ok(())
