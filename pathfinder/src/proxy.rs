@@ -10,6 +10,7 @@
 //!
 
 use std::collections::HashMap;
+use std::io::{Error, ErrorKind};
 use std::net::SocketAddr;
 use std::sync::{Arc, Mutex};
 
@@ -17,6 +18,7 @@ use amq_protocol::uri::AMQPUri;
 use futures::stream::Stream;
 use futures::sync::mpsc;
 use futures::{Future, Sink};
+use lapin_futures::error::{Error as LapinError};
 use log::{debug, info, error};
 use strum::AsStaticRef;
 use tokio::net::TcpListener;
@@ -68,11 +70,27 @@ impl Proxy {
                 let connections_local = connections.clone();
 
                 accept_async(stream)
-                    // Process the messages
+                    // Processing an unexpected error during creation a new connection
+                    .map_err(|error| {
+                        let io_error = Error::new(ErrorKind::Other, error);
+                        PathfinderError::Io(io_error)
+                    })
+                    // Prepare lapin client context for further communication with RabbitMQ.
                     .and_then(move |ws_stream| {
+                        let rabbitmq_inner = rabbimq_local.clone();
+                        rabbitmq_inner
+                            .get_context()
+                            .map(move |rabbitmq_context: Arc<RabbitMQContext>| (ws_stream, rabbitmq_context))
+                            .map_err(|error: LapinError| PathfinderError::LapinChannelError(error))
+                    })
+                    // Process the messages
+                    .and_then(move |(ws_stream, rabbitmq_context)| {
+                        let connections_inner = connections_local.clone();
                         let connection_for_insert = connections_local.clone();
                         let connection_for_remove = connections_local.clone();
-                        let connections_inner = connections_local.clone();
+
+                        let rabbitmq_context_inner = rabbitmq_context.clone();
+                        let rabbitmq_context_for_clean = rabbitmq_context.clone();
 
                         // Create a channel for the stream, which other sockets will use to
                         // send us messages. It could be used for broadcasting your data to
@@ -80,46 +98,40 @@ impl Proxy {
                         let (tx, rx) = mpsc::unbounded();
                         connection_for_insert.lock().unwrap().insert(addr, Arc::new(tx));
 
-                        // Prepare lapin client context for further communication with RabbitMQ.
-                        let rabbitmq_inner = rabbimq_local.clone();
-                        let rabbitmq_context_future = rabbitmq_inner.get_context();
-
                         // Split the WebSocket stream so that it will be possible to work
                         // with the reading and writing halves separately.
                         let (sink, stream) = ws_stream.split();
 
                         // Read and process each message
-                        let ws_reader = move |rabbitmq_context: Arc<RabbitMQContext>| {
-                            stream.for_each(move |message: Message| {
-                                // Get references to required components
-                                let addr_nested = addr.clone();
-                                let connections_nested = connections_inner.clone();
-                                let transmitter_nested = connections_nested.lock().unwrap()[&addr_nested].clone();
-                                let transmitter_for_errors = connections_nested.lock().unwrap()[&addr_nested].clone();
-                                let rabbitmq_context_nested = rabbitmq_context.clone();
+                        let ws_reader = stream.for_each(move |message: Message| {
+                            // Get references to required components
+                            let addr_nested = addr.clone();
+                            let connections_nested = connections_inner.clone();
+                            let transmitter_nested = connections_nested.lock().unwrap()[&addr_nested].clone();
+                            let transmitter_for_errors = connections_nested.lock().unwrap()[&addr_nested].clone();
+                            let rabbitmq_context_nested = rabbitmq_context_inner.clone();
 
-                                let process_request_future = engine_local
-                                    .process_request(message, transmitter_nested, rabbitmq_context_nested)
-                                    .map_err(move |error: PathfinderError| {
-                                        let response = match error {
-                                            PathfinderError::MicroserviceError(json) => {
-                                                let message = Arc::new(Box::new(json));
-                                                serialize_message(message)
-                                            },
-                                            _ => {
-                                                let error_message = format!("{}", error);
-                                                let error_type = error.as_static();
-                                                wrap_a_string_error(&error_type, error_message.as_str())
-                                            }
-                                        };
+                            let process_request_future = engine_local
+                                .process_request(message, transmitter_nested, rabbitmq_context_nested)
+                                .map_err(move |error: PathfinderError| {
+                                    let response = match error {
+                                        PathfinderError::MicroserviceError(json) => {
+                                            let message = Arc::new(Box::new(json));
+                                            serialize_message(message)
+                                        },
+                                        _ => {
+                                            let error_message = format!("{}", error);
+                                            let error_type = error.as_static();
+                                            wrap_a_string_error(&error_type, error_message.as_str())
+                                        }
+                                    };
 
-                                        transmitter_for_errors.unbounded_send(response).unwrap_or(())
-                                    });
+                                    transmitter_for_errors.unbounded_send(response).unwrap_or(())
+                                });
 
-                                tokio::spawn(process_request_future);
-                                Ok(())
-                            })
-                        };
+                            tokio::spawn(process_request_future);
+                            Ok(())
+                        });
 
                         // Write back prepared responses
                         let ws_writer = rx.fold(sink, |mut sink, msg| {
@@ -128,13 +140,16 @@ impl Proxy {
                         });
 
                         // Wait for either half to be done to tear down the other
-                        let connection = rabbitmq_context_future
-                            .map(move |rabbitmq_context: Arc<RabbitMQContext>| {
-                                ws_reader(rabbitmq_context.clone())
-                                    .map(|_| ())
-                                    .map_err(|_| ())
-                                    .select(ws_writer.map(|_| ()).map_err(|_| ()))
-                                    .then(move |_| rabbitmq_context.close_channels())
+                        let connection = ws_reader
+                            .map(|_| ())
+                            .map_err(|_| ())
+                            .select(ws_writer.map(|_| ()).map_err(|_| ()));
+
+                        // Then clean up RabbitMQ context and close the connection after the usage
+                        let handler = connection
+                            .then(move |_| {
+                                debug!("Clean up RabbitMQ context.");
+                                rabbitmq_context_for_clean.close_channels()
                             })
                             .then(move |_| {
                                 connection_for_remove.lock().unwrap().remove(&addr);
@@ -142,10 +157,10 @@ impl Proxy {
                                 Ok(())
                             });
 
-                        tokio::spawn(connection);
+                        tokio::spawn(handler);
                         Ok(())
                     })
-                    // An error occurred during the WebSocket handshake
+                    // An unexpected error occurred during processing or the WebSocket handshake
                     .or_else(|error| {
                         debug!("{}", error);
                         Ok(())
