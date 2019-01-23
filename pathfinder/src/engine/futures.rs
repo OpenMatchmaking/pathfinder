@@ -14,7 +14,7 @@ use lapin_futures_rustls::lapin::channel::{
     QueueDeclareOptions, QueueDeleteOptions, QueueUnbindOptions,
 };
 use lapin_futures_rustls::lapin::types::{AMQPValue, FieldTable};
-use log::error;
+use log::{error, info, warn};
 
 use crate::error::PathfinderError;
 use crate::rabbitmq::{RabbitMQContext};
@@ -99,7 +99,14 @@ pub fn rpc_request_future(
                     publish_message_options,
                     basic_properties
                 )
-                .map(move |_confirmation| (publish_channel, consume_channel, queue, options))
+                .map(move |confirmation| {
+                    match confirmation {
+                        Some(_) => info!("Publish message got confirmation."),
+                        None => warn!("Request wasn't delivered."),
+                    };
+
+                    (publish_channel, consume_channel, queue, options)
+                })
         })
         // 4. Consume a response message from the queue, that was declared on the 1st step
         .and_then(move |(publish_channel, consume_channel, queue, options)| {
