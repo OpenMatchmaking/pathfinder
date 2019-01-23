@@ -119,7 +119,7 @@ pub fn rpc_request_future(
                 })
         })
         // 5. Prepare a response for a client, serialize and sent via WebSocket transmitter
-        .and_then(move |(_publish_channel, consume_channel, queue, message, options)| {
+        .and_then(move |(publish_channel, consume_channel, queue, message, options)| {
             let raw_data = from_utf8(&message.data).unwrap();
             let json = Arc::new(Box::new(json_parse(raw_data).unwrap()));
             let serializer = Serializer::new();
@@ -129,7 +129,7 @@ pub fn rpc_request_future(
 
             consume_channel
                 .basic_ack(message.delivery_tag, false)
-                .map(move |_confirmation| (_publish_channel, consume_channel, queue, options))
+                .map(move |_confirmation| (publish_channel, consume_channel, queue, options))
         })
         // 6. Unbind the response queue from the exchange point
         .and_then(move |(publish_channel, consume_channel, _queue, options)| {
