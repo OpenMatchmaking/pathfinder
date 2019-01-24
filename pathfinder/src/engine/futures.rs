@@ -14,7 +14,7 @@ use lapin_futures_rustls::lapin::channel::{
     QueueDeclareOptions, QueueDeleteOptions, QueueUnbindOptions,
 };
 use lapin_futures_rustls::lapin::types::{AMQPValue, FieldTable};
-use log::error;
+use log::{error, info, warn};
 
 use crate::error::PathfinderError;
 use crate::rabbitmq::{RabbitMQContext};
@@ -99,7 +99,14 @@ pub fn rpc_request_future(
                     publish_message_options,
                     basic_properties
                 )
-                .map(move |_confirmation| (publish_channel, consume_channel, queue, options))
+                .map(move |confirmation| {
+                    match confirmation {
+                        Some(_) => info!("Publish message got confirmation."),
+                        None => warn!("Request wasn't delivered."),
+                    };
+
+                    (publish_channel, consume_channel, queue, options)
+                })
         })
         // 4. Consume a response message from the queue, that was declared on the 1st step
         .and_then(move |(publish_channel, consume_channel, queue, options)| {
@@ -119,7 +126,7 @@ pub fn rpc_request_future(
                 })
         })
         // 5. Prepare a response for a client, serialize and sent via WebSocket transmitter
-        .and_then(move |(_publish_channel, consume_channel, queue, message, options)| {
+        .and_then(move |(publish_channel, consume_channel, queue, message, options)| {
             let raw_data = from_utf8(&message.data).unwrap();
             let json = Arc::new(Box::new(json_parse(raw_data).unwrap()));
             let serializer = Serializer::new();
@@ -129,7 +136,7 @@ pub fn rpc_request_future(
 
             consume_channel
                 .basic_ack(message.delivery_tag, false)
-                .map(move |_confirmation| (_publish_channel, consume_channel, queue, options))
+                .map(move |_confirmation| (publish_channel, consume_channel, queue, options))
         })
         // 6. Unbind the response queue from the exchange point
         .and_then(move |(publish_channel, consume_channel, _queue, options)| {

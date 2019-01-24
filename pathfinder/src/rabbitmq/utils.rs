@@ -33,7 +33,7 @@ pub fn get_uri(cli: &CliOptions) -> AMQPUri {
         false => "amqp",
     };
     format!(
-        "{}://{}:{}@{}:{}/{}",
+        "{}://{}:{}@{}:{}/{}?heartbeat=10",
         schema.to_string(),
         cli.rabbitmq_username.clone(),
         cli.rabbitmq_password.clone(),
