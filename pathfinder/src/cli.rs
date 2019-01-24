@@ -10,7 +10,7 @@ use structopt::StructOpt;
 #[derive(StructOpt, Debug)]
 #[structopt(
     name = "Pathfinder",
-    version = "1.0.0",
+    version = "1.1.0",
     about = "WebSocket-over-RabbitMQ reverse proxy",
     raw(setting = "clap::AppSettings::DeriveDisplayOrder")
 )]
