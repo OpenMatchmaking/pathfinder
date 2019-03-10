@@ -1,4 +1,4 @@
-FROM rust:1.32-stretch
+FROM rust:1.33-stretch
 
 COPY ./ /code
 WORKDIR /code
