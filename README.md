@@ -36,7 +36,7 @@ a file. For example:
 ```bash
 pathfinder --config=myconfig.yaml -p 8001
 ```
-At the current stage of this project, reverse proxy is support only endpoints list, which is using for mapping URLs into certain Kafka topics.
+At the current stage of this project, reverse proxy is support only endpoints list, which is using for mapping URLs into certain RabbiMQ exchanges and queues.
 Each of those endpoints contains four fields:
 - `url` - URL that specified by a client in each request. Required.
 - `routing_key` - Means the name of topic (or queue) where will be storing the message. This topic (or queue) is listening by certain microservice. Required.
